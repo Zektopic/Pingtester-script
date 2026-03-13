@@ -1,0 +1,4 @@
+## 2024-05-14 - Prevent Command Injection in `is_reachable`
+**Vulnerability:** The `is_reachable` function in `testping1.py` passed unsanitized user input (`ip`) directly to `subprocess.Popen` when executing the `ping` command. This allowed for potential command injection if a malicious user provided a crafted IP string (e.g., `192.168.1.1; rm -rf /`).
+**Learning:** Even simple scripts meant for network scanning need strict input validation to prevent arbitrary command execution, especially when interacting with the system shell or executing external binaries.
+**Prevention:** Always validate and sanitize user input before passing it to system commands. In this case, use Python's built-in `ipaddress` module to ensure the input strictly conforms to a valid IPv4 or IPv6 address format.

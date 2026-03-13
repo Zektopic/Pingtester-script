@@ -1,4 +1,5 @@
 import subprocess
+import ipaddress
 from tqdm import tqdm  # Install with `pip install tqdm`
 
 def is_reachable(ip, timeout=1):
@@ -11,6 +12,11 @@ def is_reachable(ip, timeout=1):
     Returns:
         bool: True if the ping is successful, False otherwise.
     """
+    # Security enhancement: Validate IP address to prevent command injection
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        return False
 
     command = ["ping", "-c", "1", "-W", str(timeout), ip]  # -W for timeout in seconds (Linux)
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
