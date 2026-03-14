@@ -1,5 +1,7 @@
 import subprocess
 import concurrent.futures
+import ipaddress
+import logging
 from tqdm import tqdm  # Install with `pip install tqdm`
 
 def is_reachable(ip, timeout=1):
@@ -13,7 +15,14 @@ def is_reachable(ip, timeout=1):
         bool: True if the ping is successful, False otherwise.
     """
 
-    command = ["ping", "-c", "1", "-W", str(timeout), ip]  # -W for timeout in seconds (Linux)
+    # 🛡️ Sentinel: Validate IP address to prevent argument injection
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+    except ValueError:
+        logging.error(f"Invalid IP address format: {ip}")
+        return False
+
+    command = ["ping", "-c", "1", "-W", str(timeout), str(ip_obj)]  # -W for timeout in seconds (Linux)
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
 

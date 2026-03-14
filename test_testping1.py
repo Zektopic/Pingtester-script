@@ -26,6 +26,20 @@ class TestIsReachable(unittest.TestCase):
         self.assertFalse(is_reachable('10.0.0.1'))
 
     @patch('testping1.subprocess.Popen')
+    def test_is_reachable_invalid_ip_format(self, mock_popen):
+        """Test is_reachable returns False and does not call Popen for invalid IP."""
+        self.assertFalse(is_reachable('invalid_ip'))
+        mock_popen.assert_not_called()
+
+    @patch('testping1.subprocess.Popen')
+    def test_is_reachable_argument_injection(self, mock_popen):
+        """Test is_reachable prevents argument injection by rejecting invalid IPs."""
+        self.assertFalse(is_reachable('-h'))
+        mock_popen.assert_not_called()
+        self.assertFalse(is_reachable('192.168.1.1; rm -rf /'))
+        mock_popen.assert_not_called()
+
+    @patch('testping1.subprocess.Popen')
     def test_is_reachable_calls_ping_correctly(self, mock_popen):
         """Test is_reachable calls the ping command with correct arguments."""
         mock_process = MagicMock()
