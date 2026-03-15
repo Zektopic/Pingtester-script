@@ -19,12 +19,30 @@ def is_reachable(ip, timeout=1):
     try:
         ip_obj = ipaddress.ip_address(ip)
     except ValueError:
-        logging.error(f"Invalid IP address format: {ip}")
+        # 🛡️ Sentinel: Sanitize input before logging to prevent Log Injection (CRLF)
+        sanitized_ip = str(ip).replace('\n', '_').replace('\r', '_')
+        logging.error(f"Invalid IP address format: {sanitized_ip}")
         return False
 
-    command = ["ping", "-c", "1", "-W", str(timeout), str(ip_obj)]  # -W for timeout in seconds (Linux)
+    # 🛡️ Sentinel: Validate timeout is a positive integer to prevent DoS/argument injection
+    try:
+        timeout_val = int(timeout)
+        if timeout_val <= 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        logging.error("Invalid timeout value")
+        return False
+
+    command = ["ping", "-c", "1", "-W", str(timeout_val), str(ip_obj)]  # -W for timeout in seconds (Linux)
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, error = process.communicate()
+
+    # 🛡️ Sentinel: Add timeout to communicate() to prevent indefinite hangs
+    try:
+        output, error = process.communicate(timeout=timeout_val + 2)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        output, error = process.communicate()
+        return False
 
     return b"bytes from" in output
 

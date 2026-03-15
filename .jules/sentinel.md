@@ -1,4 +1,4 @@
-## 2024-05-18 - Input Validation for System Commands
-**Vulnerability:** Argument injection risk in `subprocess.Popen` via unsanitized IP parameter.
-**Learning:** `subprocess.Popen` without `shell=True` mitigates shell injection but is still vulnerable to argument injection (e.g., `-h` or other flags).
-**Prevention:** Strictly validate input formats using appropriate libraries (e.g., `ipaddress` for IP strings) before passing them to system commands.
+## 2024-05-24 - [Log Injection and DoS vulnerabilities]
+**Vulnerability:** [Log Injection (CRLF), Lack of Timeout Validation, Indefinite Hanging]
+**Learning:** [The code did not sanitize user input before logging, allowing attackers to inject newlines and spoof log entries. The `timeout` parameter was not validated as a positive integer, which could lead to unexpected behavior or DoS. `subprocess.communicate()` lacked a timeout, meaning if the OS `ping` command hung, the entire Python process would hang indefinitely.]
+**Prevention:** [Always sanitize user input before logging (e.g., replacing `\n` and `\r`). Always validate parameters used in system calls (like `timeout`). Always provide a timeout to `subprocess.communicate()` and handle `TimeoutExpired` by killing the process to prevent indefinite hangs.]
