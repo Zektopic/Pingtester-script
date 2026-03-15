@@ -5,52 +5,46 @@ from testping1 import is_reachable
 
 class TestIsReachable(unittest.TestCase):
 
-    @patch('testping1.subprocess.Popen')
-    def test_is_reachable_success(self, mock_popen):
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_success(self, mock_call):
         """Test is_reachable returns True for a successful ping."""
-        mock_process = MagicMock()
-        # Simulate a successful ping response containing "bytes from"
-        mock_process.communicate.return_value = (b'64 bytes from 127.0.0.1: icmp_seq=0 ttl=64 time=0.063 ms', b'')
-        mock_popen.return_value = mock_process
+        # Simulate a successful ping response by returning 0
+        mock_call.return_value = 0
 
         self.assertTrue(is_reachable('127.0.0.1'))
 
-    @patch('testping1.subprocess.Popen')
-    def test_is_reachable_failure(self, mock_popen):
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_failure(self, mock_call):
         """Test is_reachable returns False for a failed ping."""
-        mock_process = MagicMock()
-        # Simulate a failed ping response
-        mock_process.communicate.return_value = (b'Request timed out.', b'')
-        mock_popen.return_value = mock_process
+        # Simulate a failed ping response by returning a non-zero exit code
+        mock_call.return_value = 1
 
         self.assertFalse(is_reachable('10.0.0.1'))
 
-    @patch('testping1.subprocess.Popen')
-    def test_is_reachable_invalid_ip_format(self, mock_popen):
-        """Test is_reachable returns False and does not call Popen for invalid IP."""
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_invalid_ip_format(self, mock_call):
+        """Test is_reachable returns False and does not call subprocess for invalid IP."""
         self.assertFalse(is_reachable('invalid_ip'))
-        mock_popen.assert_not_called()
+        mock_call.assert_not_called()
 
-    @patch('testping1.subprocess.Popen')
-    def test_is_reachable_argument_injection(self, mock_popen):
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_argument_injection(self, mock_call):
         """Test is_reachable prevents argument injection by rejecting invalid IPs."""
         self.assertFalse(is_reachable('-h'))
-        mock_popen.assert_not_called()
+        mock_call.assert_not_called()
         self.assertFalse(is_reachable('192.168.1.1; rm -rf /'))
-        mock_popen.assert_not_called()
+        mock_call.assert_not_called()
 
-    @patch('testping1.subprocess.Popen')
-    def test_is_reachable_calls_ping_correctly(self, mock_popen):
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_calls_ping_correctly(self, mock_call):
         """Test is_reachable calls the ping command with correct arguments."""
-        mock_process = MagicMock()
-        mock_process.communicate.return_value = (b'', b'')
-        mock_popen.return_value = mock_process
+        mock_call.return_value = 0
 
         is_reachable('192.168.1.1', timeout=5)
-        # Verify that subprocess.Popen was called with the correct arguments, including the timeout
-        mock_popen.assert_called_once_with(
+        # Verify that subprocess.call was called with the correct arguments, including the timeout
+        mock_call.assert_called_once_with(
             ['ping', '-c', '1', '-W', '5', '192.168.1.1'],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
 
 if __name__ == '__main__':
