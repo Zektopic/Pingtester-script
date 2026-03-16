@@ -22,13 +22,28 @@ def is_reachable(ip, timeout=1):
         logging.error(f"Invalid IP address format: {ip}")
         return False
 
-    command = ["ping", "-c", "1", "-W", str(timeout), str(ip_obj)]  # -W for timeout in seconds (Linux)
+    # 🛡️ Sentinel: Validate timeout parameter to prevent argument injection and type errors
+    try:
+        timeout_int = int(timeout)
+        if timeout_int <= 0:
+            logging.error(f"Invalid timeout value: {timeout_int}. Must be greater than 0.")
+            return False
+    except ValueError:
+        logging.error(f"Invalid timeout format: {timeout}. Must be an integer.")
+        return False
+
+    command = ["ping", "-c", "1", "-W", str(timeout_int), str(ip_obj)]  # -W for timeout in seconds (Linux)
 
     # ⚡ Bolt: Optimized ping execution by using subprocess.call and redirecting
     # output to DEVNULL instead of using Popen with PIPE.
     # This avoids the Inter-Process Communication (IPC) overhead of capturing
     # stdout/stderr, resulting in ~35% speedup for parallel network scans.
-    return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+    # 🛡️ Sentinel: Prevent stack trace leakage by catching potential exceptions during subprocess execution
+    try:
+        return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+    except Exception as e:
+        logging.error("Failed to execute ping command.")
+        return False
 
 if __name__ == "__main__":
     # Example usage: Check reachability within a specific subnet (replace with your allowed range)

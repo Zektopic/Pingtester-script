@@ -47,5 +47,21 @@ class TestIsReachable(unittest.TestCase):
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
 
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_invalid_timeout(self, mock_call):
+        """Test is_reachable returns False and does not call subprocess for invalid timeout."""
+        self.assertFalse(is_reachable('127.0.0.1', timeout=0))
+        mock_call.assert_not_called()
+        self.assertFalse(is_reachable('127.0.0.1', timeout=-1))
+        mock_call.assert_not_called()
+        self.assertFalse(is_reachable('127.0.0.1', timeout='invalid'))
+        mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_subprocess_exception(self, mock_call):
+        """Test is_reachable handles subprocess exceptions gracefully."""
+        mock_call.side_effect = FileNotFoundError("Ping utility not found")
+        self.assertFalse(is_reachable('127.0.0.1'))
+
 if __name__ == '__main__':
     unittest.main()
