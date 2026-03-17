@@ -36,6 +36,20 @@ class TestIsReachable(unittest.TestCase):
         mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_invalid_timeout(self, mock_call):
+        """Test is_reachable rejects invalid timeout values."""
+        self.assertFalse(is_reachable('192.168.1.1', timeout='-h'))
+        mock_call.assert_not_called()
+        self.assertFalse(is_reachable('192.168.1.1', timeout='1; ls'))
+        mock_call.assert_not_called()
+        self.assertFalse(is_reachable('192.168.1.1', timeout=-1))
+        mock_call.assert_not_called()
+        self.assertFalse(is_reachable('192.168.1.1', timeout=0))
+        mock_call.assert_not_called()
+        self.assertFalse(is_reachable('192.168.1.1', timeout=None))
+        mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_calls_ping_correctly(self, mock_call):
         """Test is_reachable calls the ping command with correct arguments."""
         mock_call.return_value = 0
