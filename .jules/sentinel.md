@@ -1,4 +1,4 @@
-## 2024-05-18 - Input Validation for System Commands
-**Vulnerability:** Argument injection risk in `subprocess.Popen` via unsanitized IP parameter.
-**Learning:** `subprocess.Popen` without `shell=True` mitigates shell injection but is still vulnerable to argument injection (e.g., `-h` or other flags).
-**Prevention:** Strictly validate input formats using appropriate libraries (e.g., `ipaddress` for IP strings) before passing them to system commands.
+## 2024-05-17 - Unvalidated Secondary Parameters
+**Vulnerability:** The `timeout` parameter in `is_reachable` was not validated before being passed to `subprocess.call`. This allowed passing unexpected flags (like `-h` which caused the process to hang) or potentially argument injection if the string format changed.
+**Learning:** Security validation often focuses heavily on the primary input (like an IP address). However, secondary or "optional" parameters passed to system commands are equally dangerous if unsanitized, even if they seem benign or are expected to be integers.
+**Prevention:** Validate and type-cast *every* parameter that forms part of a shell command argument array, ensuring it strictly conforms to expected types (e.g., using `int()` and checking `> 0` for timeouts).

@@ -22,7 +22,16 @@ def is_reachable(ip, timeout=1):
         logging.error(f"Invalid IP address format: {ip}")
         return False
 
-    command = ["ping", "-c", "1", "-W", str(timeout), str(ip_obj)]  # -W for timeout in seconds (Linux)
+    # 🛡️ Sentinel: Validate timeout to prevent argument injection or errors
+    try:
+        timeout_val = int(timeout)
+        if timeout_val <= 0:
+            raise ValueError("Timeout must be a positive integer")
+    except (ValueError, TypeError):
+        logging.error(f"Invalid timeout value: {timeout}")
+        return False
+
+    command = ["ping", "-c", "1", "-W", str(timeout_val), str(ip_obj)]  # -W for timeout in seconds (Linux)
 
     # ⚡ Bolt: Optimized ping execution by using subprocess.call and redirecting
     # output to DEVNULL instead of using Popen with PIPE.
