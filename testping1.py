@@ -19,7 +19,8 @@ def is_reachable(ip, timeout=1):
     try:
         ip_obj = ipaddress.ip_address(ip)
     except ValueError:
-        logging.error(f"Invalid IP address format: {ip}")
+        # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
+        logging.error(f"Invalid IP address format: {repr(ip)}")
         return False
 
     # 🛡️ Sentinel: Validate timeout to prevent argument injection or errors
@@ -28,7 +29,8 @@ def is_reachable(ip, timeout=1):
         if timeout_val <= 0:
             raise ValueError("Timeout must be a positive integer")
     except (ValueError, TypeError):
-        logging.error(f"Invalid timeout value: {timeout}")
+        # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
+        logging.error(f"Invalid timeout value: {repr(timeout)}")
         return False
 
     command = ["ping", "-c", "1", "-W", str(timeout_val), str(ip_obj)]  # -W for timeout in seconds (Linux)
