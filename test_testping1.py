@@ -50,6 +50,23 @@ class TestIsReachable(unittest.TestCase):
         mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_prevents_log_injection(self, mock_call):
+        """Test is_reachable escapes user input to prevent log injection (CRLF)."""
+        malicious_ip = "127.0.0.1\nERROR:root:System Compromised"
+
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable(malicious_ip))
+            # Verify the newline character is escaped using repr() instead of evaluated
+            self.assertIn(r"Invalid IP address format: '127.0.0.1\nERROR:root:System Compromised'", log.output[0])
+            self.assertNotIn("\nERROR:root:System Compromised", log.output[0])
+
+        malicious_timeout = "1\nERROR:root:System Compromised"
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable('192.168.1.1', timeout=malicious_timeout))
+            self.assertIn(r"Invalid timeout value: '1\nERROR:root:System Compromised'", log.output[0])
+            self.assertNotIn("\nERROR:root:System Compromised", log.output[0])
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_calls_ping_correctly(self, mock_call):
         """Test is_reachable calls the ping command with correct arguments."""
         mock_call.return_value = 0
