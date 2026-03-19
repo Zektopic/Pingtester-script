@@ -48,6 +48,18 @@ class TestIsReachable(unittest.TestCase):
         mock_call.assert_not_called()
         self.assertFalse(is_reachable('192.168.1.1', timeout=None))
         mock_call.assert_not_called()
+        # 🛡️ Sentinel: Test resource exhaustion prevention
+        self.assertFalse(is_reachable('192.168.1.1', timeout=101))
+        mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_secure_error_handling(self, mock_call):
+        """Test is_reachable handles OSError securely without leaking exceptions."""
+        mock_call.side_effect = FileNotFoundError("No such file or directory: 'ping'")
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable('127.0.0.1'))
+            self.assertIn("Failed to execute ping command safely.", log.output[0])
+            self.assertNotIn("FileNotFoundError", log.output[0])
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_prevents_log_injection(self, mock_call):
