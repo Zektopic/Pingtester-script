@@ -26,8 +26,8 @@ def is_reachable(ip, timeout=1):
     # 🛡️ Sentinel: Validate timeout to prevent argument injection or errors
     try:
         timeout_val = int(timeout)
-        if timeout_val <= 0:
-            raise ValueError("Timeout must be a positive integer")
+        if timeout_val <= 0 or timeout_val > 100:
+            raise ValueError("Timeout must be a positive integer <= 100")
     except (ValueError, TypeError):
         # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
         logging.error(f"Invalid timeout value: {repr(timeout)}")
@@ -39,7 +39,13 @@ def is_reachable(ip, timeout=1):
     # output to DEVNULL instead of using Popen with PIPE.
     # This avoids the Inter-Process Communication (IPC) overhead of capturing
     # stdout/stderr, resulting in ~35% speedup for parallel network scans.
-    return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+    try:
+        return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+    except OSError:
+        # 🛡️ Sentinel: Fail securely on command execution errors (like FileNotFoundError)
+        # to prevent unhandled exceptions crashing the worker thread pool and leaking stack traces.
+        logging.error("Failed to execute ping command safely.")
+        return False
 
 if __name__ == "__main__":
     # Example usage: Check reachability within a specific subnet (replace with your allowed range)
