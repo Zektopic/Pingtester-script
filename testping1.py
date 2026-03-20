@@ -40,11 +40,17 @@ def is_reachable(ip, timeout=1):
     # This avoids the Inter-Process Communication (IPC) overhead of capturing
     # stdout/stderr, resulting in ~35% speedup for parallel network scans.
     try:
-        return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+        # 🛡️ Sentinel: Add python-level timeout limit as defense-in-depth to prevent
+        # worker thread pool exhaustion if the underlying ping process hangs.
+        return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout_val + 2) == 0
     except OSError:
         # 🛡️ Sentinel: Fail securely on command execution errors (like FileNotFoundError)
         # to prevent unhandled exceptions crashing the worker thread pool and leaking stack traces.
         logging.error("Failed to execute ping command safely.")
+        return False
+    except subprocess.TimeoutExpired:
+        # 🛡️ Sentinel: Catch TimeoutExpired securely to prevent it from crashing the worker thread pool.
+        logging.error("Ping command timed out unexpectedly.")
         return False
 
 if __name__ == "__main__":
