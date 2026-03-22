@@ -33,7 +33,10 @@ def is_reachable(ip, timeout=1):
         logging.error(f"Invalid timeout value: {repr(timeout)}")
         return False
 
-    command = ["ping", "-c", "1", "-W", str(timeout_val), str(ip_obj)]  # -W for timeout in seconds (Linux)
+    # ⚡ Bolt: Add `-n` flag to disable reverse DNS resolution.
+    # This prevents significant multi-second delays when target IPs lack a PTR
+    # record or DNS servers are unresponsive.
+    command = ["ping", "-n", "-c", "1", "-W", str(timeout_val), str(ip_obj)]  # -W for timeout in seconds (Linux)
 
     # ⚡ Bolt: Optimized ping execution by using subprocess.call and redirecting
     # output to DEVNULL instead of using Popen with PIPE.
