@@ -15,6 +15,11 @@ def is_reachable(ip, timeout=1):
         bool: True if the ping is successful, False otherwise.
     """
 
+    # 🛡️ Sentinel: Enforce strict string length limits to prevent DoS via ipaddress module
+    if not isinstance(ip, str) or len(ip) > 100:
+        logging.error(f"IP address exceeds maximum length or is invalid type")
+        return False
+
     # 🛡️ Sentinel: Validate IP address to prevent argument injection
     try:
         ip_obj = ipaddress.ip_address(ip)
