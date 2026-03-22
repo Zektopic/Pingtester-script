@@ -28,6 +28,14 @@ class TestIsReachable(unittest.TestCase):
         mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_ip_too_long(self, mock_call):
+        """Test is_reachable rejects overly long IP strings to prevent DoS."""
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable('A' * 101))
+            self.assertIn("IP address string too long", log.output[0])
+            mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_argument_injection(self, mock_call):
         """Test is_reachable prevents argument injection by rejecting invalid IPs."""
         self.assertFalse(is_reachable('-h'))
