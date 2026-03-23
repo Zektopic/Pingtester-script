@@ -89,7 +89,8 @@ class TestIsReachable(unittest.TestCase):
     @patch('testping1.subprocess.call')
     def test_is_reachable_subprocess_timeout(self, mock_call):
         """Test is_reachable handles subprocess.TimeoutExpired securely."""
-        mock_call.side_effect = subprocess.TimeoutExpired(cmd='ping', timeout=7)
+        from testping1 import PING_PATH
+        mock_call.side_effect = subprocess.TimeoutExpired(cmd=PING_PATH, timeout=7)
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('127.0.0.1', timeout=5))
             self.assertIn("Ping command timed out unexpectedly.", log.output[0])
@@ -98,12 +99,13 @@ class TestIsReachable(unittest.TestCase):
     @patch('testping1.subprocess.call')
     def test_is_reachable_calls_ping_correctly(self, mock_call):
         """Test is_reachable calls the ping command with correct arguments."""
+        from testping1 import PING_PATH
         mock_call.return_value = 0
 
         is_reachable('192.168.1.1', timeout=5)
         # Verify that subprocess.call was called with the correct arguments, including the timeout
         mock_call.assert_called_once_with(
-            ['ping', '-n', '-c', '1', '-W', '5', '192.168.1.1'],
+            [PING_PATH, '-n', '-c', '1', '-W', '5', '192.168.1.1'],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=7
         )
 
