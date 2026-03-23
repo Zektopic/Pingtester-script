@@ -11,7 +11,7 @@ class TestIsReachable(unittest.TestCase):
         # Simulate a successful ping response by returning 0
         mock_call.return_value = 0
 
-        self.assertTrue(is_reachable('127.0.0.1'))
+        self.assertTrue(is_reachable('192.168.1.1'))
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_failure(self, mock_call):
@@ -65,7 +65,7 @@ class TestIsReachable(unittest.TestCase):
         """Test is_reachable handles OSError securely without leaking exceptions."""
         mock_call.side_effect = FileNotFoundError("No such file or directory: 'ping'")
         with self.assertLogs(level='ERROR') as log:
-            self.assertFalse(is_reachable('127.0.0.1'))
+            self.assertFalse(is_reachable('192.168.1.1'))
             self.assertIn("Failed to execute ping command safely.", log.output[0])
             self.assertNotIn("FileNotFoundError", log.output[0])
 
@@ -91,9 +91,19 @@ class TestIsReachable(unittest.TestCase):
         """Test is_reachable handles subprocess.TimeoutExpired securely."""
         mock_call.side_effect = subprocess.TimeoutExpired(cmd='ping', timeout=7)
         with self.assertLogs(level='ERROR') as log:
-            self.assertFalse(is_reachable('127.0.0.1', timeout=5))
+            self.assertFalse(is_reachable('192.168.1.1', timeout=5))
             self.assertIn("Ping command timed out unexpectedly.", log.output[0])
             self.assertNotIn("TimeoutExpired", log.output[0])
+
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_ssrf_prevention(self, mock_call):
+        """Test is_reachable prevents SSRF by rejecting loopback, multicast, etc."""
+        ssrf_ips = ['127.0.0.1', '169.254.169.254', '224.0.0.1', '0.0.0.0']
+        for ip in ssrf_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(ip))
+                self.assertIn("IP address not allowed for scanning", log.output[0])
+                mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_calls_ping_correctly(self, mock_call):
