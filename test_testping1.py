@@ -98,8 +98,8 @@ class TestIsReachable(unittest.TestCase):
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_ssrf_prevention(self, mock_call):
-        """Test is_reachable prevents SSRF by rejecting loopback, multicast, etc."""
-        ssrf_ips = ['127.0.0.1', '169.254.169.254', '224.0.0.1', '0.0.0.0']
+        """Test is_reachable prevents SSRF by rejecting loopback, multicast, reserved, etc."""
+        ssrf_ips = ['127.0.0.1', '169.254.169.254', '224.0.0.1', '0.0.0.0', '255.255.255.255']
         for ip in ssrf_ips:
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
