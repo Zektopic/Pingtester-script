@@ -37,8 +37,9 @@ def is_reachable(ip, timeout=1):
         return False
 
     # 🛡️ Sentinel: Prevent Server-Side Request Forgery (SSRF)
-    # Block loopback, link-local, multicast, and unspecified addresses from being pinged.
-    if ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified:
+    # Block loopback, link-local, multicast, unspecified, and reserved addresses from being pinged.
+    # reserved addresses include the broadcast address (255.255.255.255)
+    if ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved:
         logging.error(f"IP address not allowed for scanning: {ip}")
         return False
 
