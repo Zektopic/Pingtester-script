@@ -112,7 +112,9 @@ if __name__ == "__main__":
                 # Removing pbar.set_description(f"Pinging {ip_address}...") here avoids console I/O bottleneck
 
                 if future.result():
-                    print(f"Device reachable at: {ip_address}")
+                    # ⚡ Bolt: Replaced print() with tqdm.write() to prevent synchronous console I/O
+                    # bottlenecks and progress bar redraw interference when rendering rapid output.
+                    tqdm.write(f"Device reachable at: {ip_address}")
                 pbar.update(1)  # Update progress bar
 
     print("Scanning complete.")
