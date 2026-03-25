@@ -84,14 +84,28 @@ if __name__ == "__main__":
 
     # Ensure you have permission to scan this subnet!
 
-    # ⚡ Bolt: Optimized IP generation by extracting redundant string splitting outside the loop.
-    # Improves performance from O(N * splits) to O(N) by caching the base IP prefix.
-    base_ip = start_ip.rsplit('.', 1)[0]
-    start_octet = int(start_ip.split('.')[-1])
-    end_octet = int(end_ip.split('.')[-1])
-    total_ips = end_octet - start_octet + 1
+    # 🛡️ Sentinel: Validate main block inputs to prevent arbitrary execution or DoS
+    # Ensure start_ip and end_ip are valid IP addresses, are in the correct order,
+    # and limit the maximum scan range to prevent resource exhaustion.
+    try:
+        start_obj = ipaddress.ip_address(start_ip)
+        end_obj = ipaddress.ip_address(end_ip)
 
-    ips_to_scan = [f"{base_ip}.{i}" for i in range(start_octet, end_octet + 1)]
+        if start_obj > end_obj:
+            raise ValueError("start_ip must be less than or equal to end_ip")
+
+        total_ips = int(end_obj) - int(start_obj) + 1
+
+        # Limit to 256 IPs (typically one /24 subnet) to prevent Denial of Service
+        if total_ips > 256:
+            raise ValueError(f"Scan range too large ({total_ips} IPs). Maximum 256 IPs allowed per scan.")
+
+    except ValueError as e:
+        logging.error(f"Invalid scan range configuration: {e}")
+        exit(1)
+
+    # Generate the list of IPs to scan robustly using ipaddress objects
+    ips_to_scan = [str(start_obj + i) for i in range(total_ips)]
 
     # ⚡ Bolt: Parallelize network scanning using ThreadPoolExecutor
     # Reduces scan time significantly by performing pings concurrently instead of sequentially.
