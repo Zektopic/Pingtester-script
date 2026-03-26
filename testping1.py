@@ -91,6 +91,11 @@ if __name__ == "__main__":
         start_obj = ipaddress.ip_address(start_ip)
         end_obj = ipaddress.ip_address(end_ip)
 
+        # 🛡️ Sentinel: Validate IP versions match to prevent unhandled TypeError
+        # Comparing IPv4 and IPv6 addresses raises a TypeError which crashes the script.
+        if start_obj.version != end_obj.version:
+            raise ValueError("start_ip and end_ip must be of the same IP version")
+
         if start_obj > end_obj:
             raise ValueError("start_ip must be less than or equal to end_ip")
 
@@ -100,7 +105,7 @@ if __name__ == "__main__":
         if total_ips > 256:
             raise ValueError(f"Scan range too large ({total_ips} IPs). Maximum 256 IPs allowed per scan.")
 
-    except ValueError as e:
+    except (ValueError, TypeError) as e:
         logging.error(f"Invalid scan range configuration: {e}")
         exit(1)
 

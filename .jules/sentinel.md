@@ -14,3 +14,7 @@
 **Vulnerability:** Even when blocking standard internal ranges (loopback, link-local, multicast, unspecified), other reserved IPs like the broadcast address (`255.255.255.255`) could still be targeted. Pinging broadcast addresses can lead to amplification attacks or unintended network noise.
 **Learning:** Python's `ipaddress` module separates `is_multicast` from `is_reserved` (which includes broadcast addresses). A comprehensive SSRF defense must cover all non-standard routing destinations.
 **Prevention:** Extend network block-lists to include `ip_obj.is_reserved` to catch broadcast addresses and other IETF-reserved network ranges that shouldn't be targeted in a standard scan.
+## 2024-05-24 - Unhandled TypeError when comparing IP versions
+**Vulnerability:** Comparing `ipaddress` objects of different versions (e.g., IPv4 and IPv6) raises a `TypeError`, which if unhandled, causes the application to crash abruptly (Denial of Service risk).
+**Learning:** `ipaddress` module's comparison operators (`<`, `>`, `<=`, `>=`) are strictly typed by IP version. They do not implicitly convert or handle cross-version comparisons securely.
+**Prevention:** Always validate that `ipaddress` objects share the same `.version` before comparing them, and catch `TypeError` alongside `ValueError` when parsing or manipulating generic IP address inputs.
