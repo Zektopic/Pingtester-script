@@ -36,6 +36,16 @@ class TestIsReachable(unittest.TestCase):
             mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_type_error(self, mock_call):
+        """Test is_reachable gracefully handles inputs that raise TypeError."""
+        invalid_ips = [None, [], {}, ()]
+        for invalid_ip in invalid_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(invalid_ip))
+                self.assertIn(f"Invalid IP address format: {repr(invalid_ip)}", log.output[0])
+                mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_argument_injection(self, mock_call):
         """Test is_reachable prevents argument injection by rejecting invalid IPs."""
         self.assertFalse(is_reachable('-h'))
