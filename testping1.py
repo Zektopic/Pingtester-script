@@ -29,9 +29,12 @@ def is_reachable(ip, timeout=1):
         return False
 
     # 🛡️ Sentinel: Validate IP address to prevent argument injection
+    # Catch TypeError alongside ValueError as ipaddress.ip_address()
+    # raises TypeError when passed None or non-string/int objects,
+    # which can crash the worker thread pool (DoS) if unhandled.
     try:
         ip_obj = ipaddress.ip_address(ip)
-    except ValueError:
+    except (ValueError, TypeError):
         # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
         logging.error(f"Invalid IP address format: {repr(ip)}")
         return False
