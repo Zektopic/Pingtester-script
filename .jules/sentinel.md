@@ -18,3 +18,7 @@
 **Vulnerability:** Comparing `ipaddress` objects of different versions (e.g., IPv4 and IPv6) raises a `TypeError`, which if unhandled, causes the application to crash abruptly (Denial of Service risk).
 **Learning:** `ipaddress` module's comparison operators (`<`, `>`, `<=`, `>=`) are strictly typed by IP version. They do not implicitly convert or handle cross-version comparisons securely.
 **Prevention:** Always validate that `ipaddress` objects share the same `.version` before comparing them, and catch `TypeError` alongside `ValueError` when parsing or manipulating generic IP address inputs.
+## 2024-05-24 - Unsafe Relative Path Execution
+**Vulnerability:** The application used `shutil.which("ping") or "ping"`. If `ping` was not found in the system `PATH`, it fell back to executing the relative string `"ping"`. This could allow arbitrary code execution or local privilege escalation if run from a directory containing a malicious executable named `ping`.
+**Learning:** Never fallback to relative command names when a system binary is expected. If a required binary is missing from the system path, the application should fail securely rather than attempting a risky, unverified local execution.
+**Prevention:** Remove fallback logic for critical system commands. Use `shutil.which()` and raise an exception (e.g., `RuntimeError`) if the expected binary is `None`.

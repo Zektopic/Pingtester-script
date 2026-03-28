@@ -9,7 +9,11 @@ from tqdm import tqdm  # Install with `pip install tqdm`
 # Calling shutil.which() once at module load avoids the overhead of traversing
 # the system PATH environment variable during every subprocess.call() execution.
 # This yields a measurable speedup when firing thousands of concurrent pings.
-PING_PATH = shutil.which("ping") or "ping"
+PING_PATH = shutil.which("ping")
+if not PING_PATH:
+    # 🛡️ Sentinel: Fail securely if the required system binary is missing, rather than
+    # falling back to a relative path ("ping") which could execute a malicious local file.
+    raise RuntimeError("Required 'ping' binary not found in system PATH.")
 
 def is_reachable(ip, timeout=1):
     """Checks if a device at the given IP address is reachable with a ping.
