@@ -1,9 +1,14 @@
+import os
 import subprocess
 import concurrent.futures
 import ipaddress
 import logging
 import shutil
 from tqdm import tqdm  # Install with `pip install tqdm`
+
+# ⚡ Bolt: Cached DEVNULL file descriptor to minimize subprocess spawn overhead
+# and kernel syscalls when firing thousands of concurrent pings.
+DEVNULL_FD = open(os.devnull, "wb")
 
 # ⚡ Bolt: Cache the absolute path of the ping executable.
 # Calling shutil.which() once at module load avoids the overhead of traversing
@@ -66,10 +71,13 @@ def is_reachable(ip, timeout=1):
     # output to DEVNULL instead of using Popen with PIPE.
     # This avoids the Inter-Process Communication (IPC) overhead of capturing
     # stdout/stderr, resulting in ~35% speedup for parallel network scans.
+    # ⚡ Bolt: Disabled close_fds and used cached DEVNULL_FD to avoid the overhead of
+    # iterating and closing all possible file descriptors in the child process
+    # and opening/closing /dev/null per execution.
     try:
         # 🛡️ Sentinel: Add python-level timeout limit as defense-in-depth to prevent
         # worker thread pool exhaustion if the underlying ping process hangs.
-        return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout_val + 2) == 0
+        return subprocess.call(command, stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=False, timeout=timeout_val + 2) == 0
     except OSError:
         # 🛡️ Sentinel: Fail securely on command execution errors (like FileNotFoundError)
         # to prevent unhandled exceptions crashing the worker thread pool and leaking stack traces.
