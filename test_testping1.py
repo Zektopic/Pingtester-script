@@ -119,14 +119,14 @@ class TestIsReachable(unittest.TestCase):
     @patch('testping1.subprocess.call')
     def test_is_reachable_calls_ping_correctly(self, mock_call):
         """Test is_reachable calls the ping command with correct arguments."""
-        from testping1 import PING_PATH
+        from testping1 import PING_PATH, DEVNULL_FD
         mock_call.return_value = 0
 
         is_reachable('192.168.1.1', timeout=5)
         # Verify that subprocess.call was called with the correct arguments, including the timeout
         mock_call.assert_called_once_with(
             [PING_PATH, '-n', '-c', '1', '-W', '5', '192.168.1.1'],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=7
+            stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=False, timeout=7
         )
 
 if __name__ == '__main__':
