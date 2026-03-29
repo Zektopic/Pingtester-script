@@ -22,3 +22,7 @@
 **Vulnerability:** The application used `shutil.which("ping") or "ping"`. If `ping` was not found in the system `PATH`, it fell back to executing the relative string `"ping"`. This could allow arbitrary code execution or local privilege escalation if run from a directory containing a malicious executable named `ping`.
 **Learning:** Never fallback to relative command names when a system binary is expected. If a required binary is missing from the system path, the application should fail securely rather than attempting a risky, unverified local execution.
 **Prevention:** Remove fallback logic for critical system commands. Use `shutil.which()` and raise an exception (e.g., `RuntimeError`) if the expected binary is `None`.
+## 2024-05-24 - DoS via Large Integer Parsing on Secondary Parameters
+**Vulnerability:** While primary inputs like IPs were length-limited, secondary inputs like `timeout` were not. Parsing extraordinarily long strings into integers (e.g., `int('9' * 100000)`) can cause significant CPU and memory overhead, allowing a Denial of Service (DoS) attack without any actual system execution.
+**Learning:** Limiting string length before parsing is critical for *all* string-to-object or string-to-number conversions, not just complex module parsing. Integer parsing can be specifically targeted for CPU exhaustion.
+**Prevention:** Always implement explicit string length limits (e.g., `len(x) <= 100`) on secondary or seemingly benign parameters before casting them to integers or other types.

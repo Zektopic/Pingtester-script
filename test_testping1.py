@@ -70,6 +70,12 @@ class TestIsReachable(unittest.TestCase):
         self.assertFalse(is_reachable('192.168.1.1', timeout=101))
         mock_call.assert_not_called()
 
+        # 🛡️ Sentinel: Test resource exhaustion prevention via overly long string length
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable('192.168.1.1', timeout='9' * 101))
+            self.assertIn("Timeout string too long", log.output[0])
+            mock_call.assert_not_called()
+
     @patch('testping1.subprocess.call')
     def test_is_reachable_secure_error_handling(self, mock_call):
         """Test is_reachable handles OSError securely without leaking exceptions."""

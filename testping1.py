@@ -56,6 +56,11 @@ def is_reachable(ip, timeout=1):
         return False
 
     # 🛡️ Sentinel: Validate timeout to prevent argument injection or errors
+    # Prevent DoS by enforcing a length limit on the timeout string before parsing
+    if isinstance(timeout, str) and len(timeout) > 100:
+        logging.error("Timeout string too long")
+        return False
+
     try:
         timeout_val = int(timeout)
         if timeout_val <= 0 or timeout_val > 100:
