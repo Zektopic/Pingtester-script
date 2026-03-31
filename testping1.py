@@ -55,6 +55,12 @@ def is_reachable(ip, timeout=1):
         logging.error(f"IP address not allowed for scanning: {ip}")
         return False
 
+    # 🛡️ Sentinel: Validate timeout length to prevent CPU exhaustion (DoS)
+    # Python's int() conversion for massive strings has O(N^2) complexity.
+    if isinstance(timeout, str) and len(timeout) > 100:
+        logging.error("Timeout string too long")
+        return False
+
     # 🛡️ Sentinel: Validate timeout to prevent argument injection or errors
     try:
         timeout_val = int(timeout)
