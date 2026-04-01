@@ -79,6 +79,14 @@ class TestIsReachable(unittest.TestCase):
         mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_timeout_too_long(self, mock_call):
+        """Test is_reachable rejects overly long timeout strings to prevent DoS."""
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable('192.168.1.1', timeout='1' * 101))
+            self.assertIn("Timeout string too long", log.output[0])
+            mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_secure_error_handling(self, mock_call):
         """Test is_reachable handles OSError securely without leaking exceptions."""
         mock_call.side_effect = FileNotFoundError("No such file or directory: 'ping'")
