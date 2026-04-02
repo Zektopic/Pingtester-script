@@ -72,7 +72,8 @@ def is_reachable(ip, timeout=1):
         timeout_val = int(timeout)
         if timeout_val <= 0 or timeout_val > 100:
             raise ValueError("Timeout must be a positive integer <= 100")
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, OverflowError):
+        # 🛡️ Sentinel: Catch OverflowError (e.g. float('inf')) alongside ValueError/TypeError
         # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
         logging.error(f"Invalid timeout value: {repr(timeout)}")
         return False
