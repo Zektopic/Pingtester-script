@@ -14,6 +14,15 @@ class TestIsReachable(unittest.TestCase):
         self.assertTrue(is_reachable('192.168.1.1'))
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_ip_object(self, mock_call):
+        """Test is_reachable fast-path using an ipaddress object directly."""
+        import ipaddress
+        mock_call.return_value = 0
+
+        ip_obj = ipaddress.ip_address('192.168.1.1')
+        self.assertTrue(is_reachable(ip_obj))
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_failure(self, mock_call):
         """Test is_reachable returns False for a failed ping."""
         # Simulate a failed ping response by returning a non-zero exit code
