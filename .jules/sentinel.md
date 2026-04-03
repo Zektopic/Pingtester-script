@@ -22,3 +22,8 @@
 **Vulnerability:** The application used `shutil.which("ping") or "ping"`. If `ping` was not found in the system `PATH`, it fell back to executing the relative string `"ping"`. This could allow arbitrary code execution or local privilege escalation if run from a directory containing a malicious executable named `ping`.
 **Learning:** Never fallback to relative command names when a system binary is expected. If a required binary is missing from the system path, the application should fail securely rather than attempting a risky, unverified local execution.
 **Prevention:** Remove fallback logic for critical system commands. Use `shutil.which()` and raise an exception (e.g., `RuntimeError`) if the expected binary is `None`.
+
+## 2024-04-03 - Thread crash via OverflowError in float to int cast
+**Vulnerability:** Application crashes and potential DoS due to `OverflowError` when untrusted input containing `Infinity` or `NaN` is parsed (e.g., from JSON) and subsequently converted to an integer using `int()`.
+**Learning:** Python's `int()` function raises `OverflowError` instead of `ValueError` or `TypeError` when it encounters infinite float values. If not explicitly caught, this can crash worker thread pools processing untrusted user input.
+**Prevention:** When converting untrusted input to integers using `int()`, explicitly catch `OverflowError` alongside `ValueError` and `TypeError` to ensure graceful handling.
