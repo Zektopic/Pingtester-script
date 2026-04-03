@@ -77,6 +77,11 @@ class TestIsReachable(unittest.TestCase):
         # 🛡️ Sentinel: Test resource exhaustion prevention
         self.assertFalse(is_reachable('192.168.1.1', timeout=101))
         mock_call.assert_not_called()
+        # 🛡️ Sentinel: Test float infinity prevention (OverflowError)
+        self.assertFalse(is_reachable('192.168.1.1', timeout=float('inf')))
+        mock_call.assert_not_called()
+        self.assertFalse(is_reachable('192.168.1.1', timeout=float('-inf')))
+        mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_timeout_too_long(self, mock_call):
