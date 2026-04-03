@@ -21,3 +21,7 @@
 ## 2026-03-30 - [Tqdm Iterator Wrapping Overhead]
 **Learning:** Manually updating a `tqdm` progress bar with `pbar.update(1)` inside a high-iteration concurrent loop (like iterating over `concurrent.futures.as_completed()`) introduces unnecessary context manager and function call overhead on the main thread, blocking rapid iterator consumption.
 **Action:** When tracking progress over an iterator, wrap the iterator directly with `tqdm(iterator, total=N)` instead of using a `with tqdm` block and manual `update()` calls. This delegates progress tracking to `tqdm`'s optimized internal iteration logic, yielding significantly (~20%) faster loop execution.
+
+## 2026-04-03 - [Object Parsing Overhead in High Concurrency]
+**Learning:** Instantiating `ipaddress.ip_address` repeatedly inside a concurrent worker loop on string representations incurs unnecessary CPU overhead. Even though string to IP object conversion takes mere microseconds, the cumulative cost across thousands of concurrent operations creates a noticeable slowdown.
+**Action:** When a main thread generates parameters for worker threads and objects are already instantiated or can easily be instantiated during generation, pass the raw objects to worker threads directly instead of strings. Use an `isinstance` fast-path inside the worker thread function to avoid redundant instantiation, significantly reducing parsing overhead in the concurrent loop.

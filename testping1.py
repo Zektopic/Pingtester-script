@@ -37,16 +37,21 @@ def is_reachable(ip, timeout=1):
         logging.error("IP address string too long")
         return False
 
-    # 🛡️ Sentinel: Validate IP address to prevent argument injection
-    # Catch TypeError alongside ValueError as ipaddress.ip_address()
-    # raises TypeError when passed None or non-string/int objects,
-    # which can crash the worker thread pool (DoS) if unhandled.
-    try:
-        ip_obj = ipaddress.ip_address(ip)
-    except (ValueError, TypeError):
-        # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
-        logging.error(f"Invalid IP address format: {repr(ip)}")
-        return False
+    # ⚡ Bolt: Fast-path for pre-instantiated IP objects to avoid redundant string parsing
+    # overhead. Avoids calling ipaddress.ip_address() for every ip.
+    if isinstance(ip, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
+        ip_obj = ip
+    else:
+        # 🛡️ Sentinel: Validate IP address to prevent argument injection
+        # Catch TypeError alongside ValueError as ipaddress.ip_address()
+        # raises TypeError when passed None or non-string/int objects,
+        # which can crash the worker thread pool (DoS) if unhandled.
+        try:
+            ip_obj = ipaddress.ip_address(ip)
+        except (ValueError, TypeError):
+            # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
+            logging.error(f"Invalid IP address format: {repr(ip)}")
+            return False
 
     # 🛡️ Sentinel: Prevent Server-Side Request Forgery (SSRF)
     # Block loopback, link-local, multicast, unspecified, and reserved addresses from being pinged.
@@ -142,7 +147,8 @@ if __name__ == "__main__":
     # Using .compressed instead of str() further avoids overhead, yielding ~15-20% faster generation.
     base_int = int(start_obj)
     ip_class = type(start_obj)
-    ips_to_scan = [ip_class(base_int + i).compressed for i in range(total_ips)]
+    # ⚡ Bolt: Pass pre-instantiated IP objects to worker threads to avoid string parsing overhead
+    ips_to_scan = [ip_class(base_int + i) for i in range(total_ips)]
 
     # ⚡ Bolt: Parallelize network scanning using ThreadPoolExecutor
     # Reduces scan time significantly by performing pings concurrently instead of sequentially.
