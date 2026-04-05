@@ -159,7 +159,7 @@ class TestIsReachable(unittest.TestCase):
         is_reachable('192.168.1.1', timeout=5)
         # Verify that subprocess.call was called with the correct arguments, including the timeout
         mock_call.assert_called_once_with(
-            [PING_PATH, '-n', '-c', '1', '-W', '5', '192.168.1.1'],
+            [PING_PATH, '-n', '-q', '-c', '1', '-W', '5', '192.168.1.1'],
             stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=False, timeout=7
         )
 
