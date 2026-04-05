@@ -57,7 +57,10 @@ def is_reachable(ip, timeout=1):
     # Block loopback, link-local, multicast, unspecified, and reserved addresses from being pinged.
     # reserved addresses include the broadcast address (255.255.255.255)
     if ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved:
-        logging.error(f"IP address not allowed for scanning: {ip}")
+        # 🛡️ Sentinel: Sanitize log input using repr() to prevent CRLF/Log Injection
+        # IPv6 addresses can contain an arbitrary scope ID (e.g., %eth0\r\n) which is
+        # not sanitized by ipaddress.ip_address() and could allow log spoofing.
+        logging.error(f"IP address not allowed for scanning: {repr(ip)}")
         return False
 
     # 🛡️ Sentinel: Validate timeout length to prevent CPU exhaustion (DoS)

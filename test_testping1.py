@@ -118,6 +118,19 @@ class TestIsReachable(unittest.TestCase):
             self.assertNotIn("\nERROR:root:System Compromised", log.output[0])
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_ssrf_log_injection(self, mock_call):
+        """Test is_reachable escapes log injection in the SSRF block using an IPv6 scope ID."""
+        # IPv6 permits a scope ID which can bypass validation if it contains a newline.
+        # This tests that the original `ip` string is escaped when logged by the SSRF filter.
+        malicious_ip = "fe80::1%eth0\nERROR:root:System Compromised"
+
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable(malicious_ip))
+            self.assertIn(r"IP address not allowed for scanning: 'fe80::1%eth0\nERROR:root:System Compromised'", log.output[0])
+            self.assertNotIn("\nERROR:root:System Compromised", log.output[0])
+            mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_subprocess_timeout(self, mock_call):
         """Test is_reachable handles subprocess.TimeoutExpired securely."""
         from testping1 import PING_PATH
