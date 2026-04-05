@@ -85,11 +85,15 @@ def is_reachable(ip, timeout=1):
         logging.error(f"Invalid timeout value: {repr(timeout)}")
         return False
 
-    # ⚡ Bolt: Optimized ping execution by adding `-n` flag.
+    # ⚡ Bolt: Optimized ping execution by adding `-n` and `-q` flags.
     # The `-n` flag skips reverse DNS resolution. Without it, ping attempts to
     # resolve the hostname for every IP, which can cause multi-second delays
     # (even with a 1s timeout) if the IP lacks a PTR record or DNS is unresponsive.
-    command = [PING_PATH, "-n", "-c", "1", "-W", str(timeout_val), str(ip_obj)]  # -W for timeout in seconds (Linux)
+    # The `-q` (quiet) flag suppresses output generation. This prevents the `ping`
+    # binary from allocating and formatting string output for every ICMP echo reply
+    # it receives, slightly reducing CPU usage on the host OS when firing thousands
+    # of concurrent pings.
+    command = [PING_PATH, "-n", "-q", "-c", "1", "-W", str(timeout_val), str(ip_obj)]  # -W for timeout in seconds (Linux)
 
     # ⚡ Bolt: Optimized ping execution by using subprocess.call and redirecting
     # output to DEVNULL instead of using Popen with PIPE.
