@@ -126,9 +126,33 @@ class TestIsReachable(unittest.TestCase):
 
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable(malicious_ip))
-            self.assertIn(r"IP address not allowed for scanning: 'fe80::1%eth0\nERROR:root:System Compromised'", log.output[0])
+            # 🛡️ Sentinel: Test is updated because invalid scope_id is now caught earlier
+            self.assertIn(r"Invalid IPv6 scope ID: 'eth0\nERROR:root:System Compromised'", log.output[0])
             self.assertNotIn("\nERROR:root:System Compromised", log.output[0])
             mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_invalid_scope_id(self, mock_call):
+        """Test is_reachable rejects IPv6 addresses with invalid scope IDs to prevent injection."""
+        import ipaddress
+
+        # We must instantiate the IPv6Address manually, as ip_address() strictly parses the string.
+        # But this tests the case where a pre-instantiated malicious object is passed.
+        malicious_ips = [
+            ipaddress.IPv6Address("fe80::1"),
+            ipaddress.IPv6Address("fe80::1"),
+            ipaddress.IPv6Address("fe80::1"),
+        ]
+        # Forcibly inject malicious scope IDs into the objects
+        malicious_ips[0]._scope_id = "eth0;rm -rf /"
+        malicious_ips[1]._scope_id = "eth0\nls"
+        malicious_ips[2]._scope_id = "eth0\r\nls"
+
+        for ip in malicious_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(ip))
+                self.assertIn("Invalid IPv6 scope ID", log.output[0])
+                mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_subprocess_timeout(self, mock_call):

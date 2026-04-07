@@ -4,6 +4,7 @@ import concurrent.futures
 import ipaddress
 import logging
 import shutil
+import re
 from tqdm import tqdm  # Install with `pip install tqdm`
 
 # ⚡ Bolt: Cached DEVNULL file descriptor to minimize subprocess spawn overhead
@@ -51,6 +52,13 @@ def is_reachable(ip, timeout=1):
         except (ValueError, TypeError):
             # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
             logging.error(f"Invalid IP address format: {repr(ip)}")
+            return False
+
+    # 🛡️ Sentinel: Validate IPv6 scope_id to prevent Log and Argument Injection
+    # The Python ipaddress module allows arbitrary characters (including \n and \r) in the scope_id
+    if getattr(ip_obj, 'scope_id', None):
+        if not re.fullmatch(r'[\w\-]+', ip_obj.scope_id):
+            logging.error(f"Invalid IPv6 scope ID: {repr(ip_obj.scope_id)}")
             return False
 
     # 🛡️ Sentinel: Prevent Server-Side Request Forgery (SSRF)
