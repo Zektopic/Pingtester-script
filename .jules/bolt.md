@@ -25,3 +25,7 @@
 ## 2026-04-03 - [Object Parsing Overhead in High Concurrency]
 **Learning:** Instantiating `ipaddress.ip_address` repeatedly inside a concurrent worker loop on string representations incurs unnecessary CPU overhead. Even though string to IP object conversion takes mere microseconds, the cumulative cost across thousands of concurrent operations creates a noticeable slowdown.
 **Action:** When a main thread generates parameters for worker threads and objects are already instantiated or can easily be instantiated during generation, pass the raw objects to worker threads directly instead of strings. Use an `isinstance` fast-path inside the worker thread function to avoid redundant instantiation, significantly reducing parsing overhead in the concurrent loop.
+
+## 2024-05-30 - [Polymorphic Type-Checking Order]
+**Learning:** In high-frequency loops dealing with polymorphic inputs (like `is_reachable` receiving both `ipaddress` objects and strings), ordering type-checking conditionals so the most frequent expected type is evaluated first acts as a significant fast-path. It bypasses redundant validation steps (like string length checks or try-except blocks) on the hot-path, minimizing CPU overhead.
+**Action:** Always order `isinstance` or type-checking conditionals to evaluate the most common or pre-instantiated object types first before falling back to extensive string validation or conversion logic.
