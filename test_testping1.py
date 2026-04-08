@@ -126,8 +126,29 @@ class TestIsReachable(unittest.TestCase):
 
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable(malicious_ip))
-            self.assertIn(r"IP address not allowed for scanning: 'fe80::1%eth0\nERROR:root:System Compromised'", log.output[0])
+            self.assertIn(r"Invalid IPv6 scope ID: 'fe80::1%eth0\nERROR:root:System Compromised'", log.output[0])
             self.assertNotIn("\nERROR:root:System Compromised", log.output[0])
+            mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_ipv6_scope_id_validation(self, mock_call):
+        """Test is_reachable rejects arbitrary and potentially malicious IPv6 scope_ids."""
+        import ipaddress
+        # Manually instantiate and inject malicious scope_id to bypass parsing
+        malicious_ip_obj = ipaddress.IPv6Address('fe80::1')
+        malicious_ip_obj._scope_id = 'eth0; ls'
+
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable(malicious_ip_obj))
+            self.assertIn("Invalid IPv6 scope ID: IPv6Address('fe80::1%eth0; ls')", log.output[0])
+            mock_call.assert_not_called()
+
+        malicious_ip_obj2 = ipaddress.IPv6Address('fe80::1')
+        malicious_ip_obj2._scope_id = 'eth0\nERROR:root:Compromised'
+
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable(malicious_ip_obj2))
+            self.assertIn("Invalid IPv6 scope ID: IPv6Address('fe80::1%eth0\\nERROR:root:Compromised')", log.output[0])
             mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')

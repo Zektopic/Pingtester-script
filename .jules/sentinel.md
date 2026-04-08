@@ -27,3 +27,8 @@
 **Vulnerability:** Application crashes and potential DoS due to `OverflowError` when untrusted input containing `Infinity` or `NaN` is parsed (e.g., from JSON) and subsequently converted to an integer using `int()`.
 **Learning:** Python's `int()` function raises `OverflowError` instead of `ValueError` or `TypeError` when it encounters infinite float values. If not explicitly caught, this can crash worker thread pools processing untrusted user input.
 **Prevention:** When converting untrusted input to integers using `int()`, explicitly catch `OverflowError` alongside `ValueError` and `TypeError` to ensure graceful handling.
+
+## 2024-05-18 - IPv6 scope_id Argument and Log Injection Prevention
+**Vulnerability:** Log and Argument Injection via unhandled IPv6 `scope_id`
+**Learning:** Python's `ipaddress.ip_address` function permits arbitrary characters (like `\n` or `;`) in the `scope_id` section of IPv6 addresses. If the IP address object is logged or used in a subprocess directly without validation, these characters can result in log injection or arbitrary argument execution.
+**Prevention:** Strictly validate `scope_id` of IPv6 addresses using a regex like `re.fullmatch(r'[\w\-]+', ip_obj.scope_id)` before they interact with subprocess execution, logging, or other sinks. Wrap unsanitized IP inputs in `repr()` when logging.
