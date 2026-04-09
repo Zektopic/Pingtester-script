@@ -75,30 +75,31 @@ def is_reachable(ip, timeout=1):
         logging.error(f"IP address not allowed for scanning: {repr(ip)}")
         return False
 
-    # 🛡️ Sentinel: Validate timeout length to prevent CPU exhaustion (DoS)
-    # Python's int() conversion for massive strings has O(N^2) complexity.
-    if isinstance(timeout, str) and len(timeout) > 100:
-        logging.error("Timeout string too long")
-        return False
-
-    # 🛡️ Sentinel: Validate timeout to prevent argument injection or errors
-    # 🛡️ Sentinel: Add input length limit to prevent CPU exhaustion (DoS)
-    # Python's int() conversion algorithm can be exploited with very long strings
-    if isinstance(timeout, str) and len(timeout) > 100:
-        logging.error("Timeout string too long")
-        return False
-
-    try:
-        timeout_val = int(timeout)
+    # ⚡ Bolt: Fast-path for integer timeouts (the default) to avoid redundant string length
+    # checks, type conversion, and try-except overhead on the hot-path.
+    if type(timeout) is int:
+        timeout_val = timeout
         if timeout_val <= 0 or timeout_val > 100:
-            raise ValueError("Timeout must be a positive integer <= 100")
-    except (ValueError, TypeError, OverflowError):
-        # 🛡️ Sentinel: Catch OverflowError alongside ValueError/TypeError
-        # Inputs originating from JSON can include Infinity (parsed as float)
-        # which raises OverflowError when cast to int and crashes threads.
-        # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
-        logging.error(f"Invalid timeout value: {repr(timeout)}")
-        return False
+            logging.error(f"Invalid timeout value: {repr(timeout)}")
+            return False
+    else:
+        # 🛡️ Sentinel: Validate timeout length to prevent CPU exhaustion (DoS)
+        # Python's int() conversion for massive strings has O(N^2) complexity.
+        if isinstance(timeout, str) and len(timeout) > 100:
+            logging.error("Timeout string too long")
+            return False
+
+        try:
+            timeout_val = int(timeout)
+            if timeout_val <= 0 or timeout_val > 100:
+                raise ValueError("Timeout must be a positive integer <= 100")
+        except (ValueError, TypeError, OverflowError):
+            # 🛡️ Sentinel: Catch OverflowError alongside ValueError/TypeError
+            # Inputs originating from JSON can include Infinity (parsed as float)
+            # which raises OverflowError when cast to int and crashes threads.
+            # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
+            logging.error(f"Invalid timeout value: {repr(timeout)}")
+            return False
 
     # ⚡ Bolt: Optimized ping execution by adding `-n` and `-q` flags.
     # The `-n` flag skips reverse DNS resolution. Without it, ping attempts to
