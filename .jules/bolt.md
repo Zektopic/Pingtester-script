@@ -29,3 +29,6 @@
 ## 2024-05-30 - [Polymorphic Type-Checking Order]
 **Learning:** In high-frequency loops dealing with polymorphic inputs (like `is_reachable` receiving both `ipaddress` objects and strings), ordering type-checking conditionals so the most frequent expected type is evaluated first acts as a significant fast-path. It bypasses redundant validation steps (like string length checks or try-except blocks) on the hot-path, minimizing CPU overhead.
 **Action:** Always order `isinstance` or type-checking conditionals to evaluate the most common or pre-instantiated object types first before falling back to extensive string validation or conversion logic.
+## 2023-10-27 - Progress Bar Stalls with `executor.map`
+**Learning:** Replacing `concurrent.futures.as_completed` + `executor.submit` with `executor.map` to save memory (by avoiding a dictionary of Futures) is an anti-pattern when rendering progress bars for tasks with variable latencies. `executor.map` blocks and yields results in submission order, causing the progress bar to stall on slow tasks (like timeouts) and jump, ruining the UX.
+**Action:** Always stick with `as_completed` when real-time CLI responsiveness and smooth progress tracking are required, even if it uses slightly more memory.
