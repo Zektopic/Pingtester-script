@@ -39,6 +39,12 @@ def is_reachable(ip, timeout=1):
     if isinstance(ip, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
         ip_obj = ip
     else:
+        # 🛡️ Sentinel: Prevent integer string conversion exhaustion (DoS)
+        # Check integer bounds before passing to ipaddress to avoid ValueError
+        if type(ip) is int and (ip < 0 or ip > (2**128 - 1)):
+            logging.error("IP address integer out of range")
+            return False
+
         # 🛡️ Sentinel: Add input length limit to prevent resource exhaustion (DoS)
         # The ipaddress module can take significant time to parse extremely long strings
         if isinstance(ip, str) and len(ip) > 100:
@@ -53,7 +59,12 @@ def is_reachable(ip, timeout=1):
             ip_obj = ipaddress.ip_address(ip)
         except (ValueError, TypeError):
             # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
-            logging.error(f"Invalid IP address format: {repr(ip)}")
+            # Handle ValueError from repr() on massive data structures
+            try:
+                safe_ip = repr(ip)
+            except ValueError:
+                safe_ip = "<unrepresentable>"
+            logging.error(f"Invalid IP address format: {safe_ip}")
             return False
 
     # 🛡️ Sentinel: Prevent Log and Argument Injection via IPv6 scope_id
@@ -62,7 +73,11 @@ def is_reachable(ip, timeout=1):
     # injection in the subprocess call or log injection.
     if getattr(ip_obj, 'scope_id', None):
         if not re.fullmatch(r'[\w\-]+', ip_obj.scope_id):
-            logging.error(f"Invalid IPv6 scope ID: {repr(ip)}")
+            try:
+                safe_ip = repr(ip)
+            except ValueError:
+                safe_ip = "<unrepresentable>"
+            logging.error(f"Invalid IPv6 scope ID: {safe_ip}")
             return False
 
     # 🛡️ Sentinel: Prevent Server-Side Request Forgery (SSRF)
@@ -72,18 +87,21 @@ def is_reachable(ip, timeout=1):
         # 🛡️ Sentinel: Sanitize log input using repr() to prevent CRLF/Log Injection
         # IPv6 addresses can contain an arbitrary scope ID (e.g., %eth0\r\n) which is
         # not sanitized by ipaddress.ip_address() and could allow log spoofing.
-        logging.error(f"IP address not allowed for scanning: {repr(ip)}")
+        try:
+            safe_ip = repr(ip)
+        except ValueError:
+            safe_ip = "<unrepresentable>"
+        logging.error(f"IP address not allowed for scanning: {safe_ip}")
+        return False
+
+    # 🛡️ Sentinel: Prevent integer string conversion exhaustion (DoS)
+    # Reject massive integers before passing them to string formatting/repr()
+    if type(timeout) is int and (timeout < 0 or timeout > 100):
+        logging.error("Timeout integer out of range")
         return False
 
     # 🛡️ Sentinel: Validate timeout length to prevent CPU exhaustion (DoS)
     # Python's int() conversion for massive strings has O(N^2) complexity.
-    if isinstance(timeout, str) and len(timeout) > 100:
-        logging.error("Timeout string too long")
-        return False
-
-    # 🛡️ Sentinel: Validate timeout to prevent argument injection or errors
-    # 🛡️ Sentinel: Add input length limit to prevent CPU exhaustion (DoS)
-    # Python's int() conversion algorithm can be exploited with very long strings
     if isinstance(timeout, str) and len(timeout) > 100:
         logging.error("Timeout string too long")
         return False
@@ -97,7 +115,11 @@ def is_reachable(ip, timeout=1):
         # Inputs originating from JSON can include Infinity (parsed as float)
         # which raises OverflowError when cast to int and crashes threads.
         # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
-        logging.error(f"Invalid timeout value: {repr(timeout)}")
+        try:
+            safe_timeout = repr(timeout)
+        except ValueError:
+            safe_timeout = "<unrepresentable>"
+        logging.error(f"Invalid timeout value: {safe_timeout}")
         return False
 
     # ⚡ Bolt: Optimized ping execution by adding `-n` and `-q` flags.
