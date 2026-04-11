@@ -11,6 +11,12 @@ from tqdm import tqdm  # Install with `pip install tqdm`
 # and kernel syscalls when firing thousands of concurrent pings.
 DEVNULL_FD = open(os.devnull, "wb")
 
+# ⚡ Bolt: Cache compiled regex for IPv6 scope_id validation.
+# Calling re.compile() once at module load avoids the overhead of parsing and compiling
+# the regular expression (or looking it up in the internal cache) during every is_reachable() execution.
+# This yields a measurable CPU speedup when firing thousands of concurrent pings.
+SCOPE_ID_REGEX = re.compile(r'[\w\-]+')
+
 # ⚡ Bolt: Cache the absolute path of the ping executable.
 # Calling shutil.which() once at module load avoids the overhead of traversing
 # the system PATH environment variable during every subprocess.call() execution.
@@ -72,7 +78,7 @@ def is_reachable(ip, timeout=1):
     # the scope_id of IPv6 addresses. If unhandled, this can lead to argument
     # injection in the subprocess call or log injection.
     if getattr(ip_obj, 'scope_id', None):
-        if not re.fullmatch(r'[\w\-]+', ip_obj.scope_id):
+        if not SCOPE_ID_REGEX.fullmatch(ip_obj.scope_id):
             try:
                 safe_ip = repr(ip)
             except ValueError:
