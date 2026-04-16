@@ -92,6 +92,39 @@ class TestIsReachable(unittest.TestCase):
             mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_massive_int_ip(self, mock_call):
+        """Test is_reachable rejects massive integers for IP to prevent DoS."""
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable(10**10000))
+            self.assertIn("IP address integer out of range", log.output[0])
+            mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_massive_int_timeout(self, mock_call):
+        """Test is_reachable rejects massive integers for timeout to prevent DoS."""
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable('192.168.1.1', timeout=10**10000))
+            self.assertIn("Timeout integer out of range", log.output[0])
+            mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_unrepresentable_repr(self, mock_call):
+        """Test is_reachable handles ValueError during repr() safely."""
+        class MaliciousRepr:
+            def __repr__(self):
+                raise ValueError("Exceeds limit")
+
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable(MaliciousRepr()))
+            self.assertIn("Invalid IP address format: <unrepresentable>", log.output[0])
+            mock_call.assert_not_called()
+
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable('192.168.1.1', timeout=MaliciousRepr()))
+            self.assertIn("Invalid timeout value: <unrepresentable>", log.output[0])
+            mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_secure_error_handling(self, mock_call):
         """Test is_reachable handles OSError securely without leaking exceptions."""
         mock_call.side_effect = FileNotFoundError("No such file or directory: 'ping'")
