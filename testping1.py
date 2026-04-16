@@ -100,16 +100,14 @@ def is_reachable(ip, timeout=1):
         logging.error(f"IP address not allowed for scanning: {safe_ip}")
         return False
 
-    # ⚡ Bolt: Fast-path for pre-instantiated integer timeout to avoid redundant string
-    # length checks and try...except parsing overhead on the hot-path.
+    # ⚡ Bolt: Fast-path for integer timeouts (the default) to avoid redundant string length
+    # checks, type conversion, and try-except overhead on the hot-path.
     if type(timeout) is int:
         # 🛡️ Sentinel: Prevent integer string conversion exhaustion (DoS)
-        # Reject massive integers before passing them to string formatting/repr()
+        # Reject out-of-range integers without calling repr() to avoid ValueError
+        # from Python's integer string conversion limit on massive integers.
         if timeout <= 0 or timeout > 100:
-            if timeout < 0 or timeout > 100:
-                logging.error("Timeout integer out of range")
-            else:
-                logging.error(f"Invalid timeout value: {timeout}")
+            logging.error("Timeout integer out of range")
             return False
         timeout_val = timeout
     else:
@@ -128,6 +126,7 @@ def is_reachable(ip, timeout=1):
             # Inputs originating from JSON can include Infinity (parsed as float)
             # which raises OverflowError when cast to int and crashes threads.
             # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
+            # Handle ValueError from repr() on objects with custom __repr__
             try:
                 safe_timeout = repr(timeout)
             except ValueError:
