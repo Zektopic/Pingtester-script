@@ -100,12 +100,16 @@ def is_reachable(ip, timeout=1):
         logging.error(f"IP address not allowed for scanning: {safe_ip}")
         return False
 
-    # ⚡ Bolt: Fast-path for pre-instantiated integer timeouts.
-    # By evaluating the most frequent expected type (int) first, we bypass redundant
-    # string type-checking and the try-except conversion block on the hot-path.
+    # ⚡ Bolt: Fast-path for pre-instantiated integer timeout to avoid redundant string
+    # length checks and try...except parsing overhead on the hot-path.
     if type(timeout) is int:
+        # 🛡️ Sentinel: Prevent integer string conversion exhaustion (DoS)
+        # Reject massive integers before passing them to string formatting/repr()
         if timeout <= 0 or timeout > 100:
-            logging.error("Timeout integer out of range")
+            if timeout < 0 or timeout > 100:
+                logging.error("Timeout integer out of range")
+            else:
+                logging.error(f"Invalid timeout value: {timeout}")
             return False
         timeout_val = timeout
     else:
