@@ -89,7 +89,17 @@ def is_reachable(ip, timeout=1):
     # 🛡️ Sentinel: Prevent Server-Side Request Forgery (SSRF)
     # Block loopback, link-local, multicast, unspecified, and reserved addresses from being pinged.
     # reserved addresses include the broadcast address (255.255.255.255)
-    if ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved:
+
+    # 🛡️ Sentinel: Prevent SSRF bypass via IPv4-mapped IPv6 addresses.
+    # Python's ipaddress module does not apply all IPv4 property checks (like
+    # is_link_local or is_unspecified) to IPv4-mapped IPv6 addresses (e.g., ::ffff:169.254.169.254).
+    # We must unwrap the IPv4 address before validating it against the blocklist.
+    ip_to_check = ip_obj
+    mapped_ip = getattr(ip_obj, 'ipv4_mapped', None)
+    if mapped_ip is not None:
+        ip_to_check = mapped_ip
+
+    if ip_to_check.is_loopback or ip_to_check.is_link_local or ip_to_check.is_multicast or ip_to_check.is_unspecified or ip_to_check.is_reserved:
         # 🛡️ Sentinel: Sanitize log input using repr() to prevent CRLF/Log Injection
         # IPv6 addresses can contain an arbitrary scope ID (e.g., %eth0\r\n) which is
         # not sanitized by ipaddress.ip_address() and could allow log spoofing.

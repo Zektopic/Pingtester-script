@@ -54,6 +54,16 @@ class TestIsReachable(unittest.TestCase):
                 mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_ssrf_bypass_ipv4_mapped(self, mock_call):
+        """Test is_reachable prevents SSRF bypass via IPv4-mapped IPv6 addresses."""
+        ssrf_mapped_ips = ['::ffff:127.0.0.1', '::ffff:169.254.169.254', '::ffff:224.0.0.1', '::ffff:0.0.0.0', '::ffff:255.255.255.255']
+        for ip in ssrf_mapped_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(ip))
+                self.assertIn("IP address not allowed for scanning", log.output[0])
+                mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_argument_injection(self, mock_call):
         """Test is_reachable prevents argument injection by rejecting invalid IPs."""
         self.assertFalse(is_reachable('-h'))
