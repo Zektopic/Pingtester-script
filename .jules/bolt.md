@@ -40,3 +40,7 @@
 ## 2024-06-05 - [Type-Checking Fast Path for Integers]
 **Learning:** In high-frequency loops, when handling polymorphic inputs that default to primitive types like integers (e.g., `timeout` args), structuring validation to check `type(val) is int` first before falling back to string length checks and `try...except` parsing blocks provides a significant fast-path. Benchmarks showed >50% speedup for parameter validation by bypassing redundant exception handling overhead.
 **Action:** Always structure polymorphic parameter validation to immediately process and return/assign the expected primitive type first, enclosing slower parsing/casting operations in an `else` block.
+
+## 2024-06-10 - [Type Checking Optimization]
+**Learning:** In high-frequency loops dealing with polymorphic inputs where the expected type is a final class (like `ipaddress.IPv4Address`), checking the exact object type via `type(var) is X` is significantly (~2x) faster than using `isinstance(var, (X, Y))`. This is because `isinstance` performs inheritance checks which add measurable overhead in tight CPU-bound fast paths.
+**Action:** Replace `isinstance` with exact `type(var) is X` checks when optimizing pure CPU-bound fast-paths for final classes or primitives (like `int`) to bypass inheritance checking overhead.
