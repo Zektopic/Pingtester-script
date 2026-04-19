@@ -97,10 +97,14 @@ def is_reachable(ip, timeout=1):
     # Python's ipaddress module does not apply all IPv4 property checks (like
     # is_link_local or is_unspecified) to IPv4-mapped IPv6 addresses (e.g., ::ffff:169.254.169.254).
     # We must unwrap the IPv4 address before validating it against the blocklist.
+    # ⚡ Bolt: Optimized SSRF check bypass by replacing `getattr()` with
+    # explicit type checking. This avoids the internal dictionary lookup
+    # and exception handling overhead of dynamic attribute access.
     ip_to_check = ip_obj
-    mapped_ip = getattr(ip_obj, 'ipv4_mapped', None)
-    if mapped_ip is not None:
-        ip_to_check = mapped_ip
+    if type(ip_obj) is ipaddress.IPv6Address:
+        mapped_ip = ip_obj.ipv4_mapped
+        if mapped_ip is not None:
+            ip_to_check = mapped_ip
 
     if ip_to_check.is_loopback or ip_to_check.is_link_local or ip_to_check.is_multicast or ip_to_check.is_unspecified or ip_to_check.is_reserved:
         # 🛡️ Sentinel: Sanitize log input using repr() to prevent CRLF/Log Injection
@@ -116,13 +120,10 @@ def is_reachable(ip, timeout=1):
     # ⚡ Bolt: Fast-path for integer timeouts to avoid redundant casting overhead.
     # Checking for type(timeout) is int first bypasses the expensive isinstance
     # checks and try...except blocks for the most common input type.
+    # We combine range checks to short-circuit logic earlier.
     if type(timeout) is int:
-        # 🛡️ Sentinel: Prevent integer string conversion exhaustion (DoS)
-        if timeout < 0 or timeout > 100:
-            logging.error("Timeout integer out of range")
-            return False
-        if timeout == 0:
-            logging.error("Invalid timeout value: 0")
+        if not (0 < timeout <= 100):
+            logging.error(f"Invalid timeout value: {timeout}" if timeout == 0 else "Timeout integer out of range")
             return False
         timeout_val = timeout
     else:
