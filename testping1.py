@@ -81,10 +81,11 @@ def is_reachable(ip, timeout=1):
     # the scope_id of IPv6 addresses. If unhandled, this can lead to argument
     # injection in the subprocess call or log injection.
     if getattr(ip_obj, 'scope_id', None):
-        if not SCOPE_ID_REGEX.fullmatch(ip_obj.scope_id):
+        if type(ip_obj.scope_id) is not str or not SCOPE_ID_REGEX.fullmatch(ip_obj.scope_id):
             try:
-                safe_ip = repr(ip)
-            except ValueError:
+                # Need to handle case where scope_id is an int and repr() fails inside ipaddress module
+                safe_ip = repr(ip) if type(ip_obj.scope_id) is str else f"{ip_obj.__class__.__name__}('{ip_obj.compressed}%{ip_obj.scope_id}')"
+            except (ValueError, TypeError):
                 safe_ip = "<unrepresentable>"
             logging.error(f"Invalid IPv6 scope ID: {safe_ip}")
             return False
