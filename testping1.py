@@ -94,20 +94,29 @@ def is_reachable(ip, timeout=1):
     # Block loopback, link-local, multicast, unspecified, and reserved addresses from being pinged.
     # reserved addresses include the broadcast address (255.255.255.255)
 
-    # 🛡️ Sentinel: Prevent SSRF bypass via IPv4-mapped IPv6 addresses.
+    # 🛡️ Sentinel: Prevent SSRF bypass via IPv4-mapped IPv6, 6to4, and Teredo addresses.
     # Python's ipaddress module does not apply all IPv4 property checks (like
-    # is_link_local or is_unspecified) to IPv4-mapped IPv6 addresses (e.g., ::ffff:169.254.169.254).
-    # We must unwrap the IPv4 address before validating it against the blocklist.
+    # is_link_local or is_unspecified) to IPv4-mapped IPv6 addresses or tunneling addresses.
+    # We must unwrap the embedded IPv4 addresses before validating them against the blocklist.
     # ⚡ Bolt: Optimized SSRF check bypass by replacing `getattr()` with
     # explicit type checking. This avoids the internal dictionary lookup
     # and exception handling overhead of dynamic attribute access.
-    ip_to_check = ip_obj
-    if type(ip_obj) is ipaddress.IPv6Address:
-        mapped_ip = ip_obj.ipv4_mapped
-        if mapped_ip is not None:
-            ip_to_check = mapped_ip
+    is_blocked = ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved
+    if not is_blocked and type(ip_obj) is ipaddress.IPv6Address:
+        if ip_obj.ipv4_mapped is not None:
+            mapped = ip_obj.ipv4_mapped
+            is_blocked = mapped.is_loopback or mapped.is_link_local or mapped.is_multicast or mapped.is_unspecified or mapped.is_reserved
+        elif ip_obj.sixtofour is not None:
+            s2f = ip_obj.sixtofour
+            is_blocked = s2f.is_loopback or s2f.is_link_local or s2f.is_multicast or s2f.is_unspecified or s2f.is_reserved
+        elif ip_obj.teredo is not None:
+            t_srv, t_cli = ip_obj.teredo
+            is_blocked = (
+                t_srv.is_loopback or t_srv.is_link_local or t_srv.is_multicast or t_srv.is_unspecified or t_srv.is_reserved or
+                t_cli.is_loopback or t_cli.is_link_local or t_cli.is_multicast or t_cli.is_unspecified or t_cli.is_reserved
+            )
 
-    if ip_to_check.is_loopback or ip_to_check.is_link_local or ip_to_check.is_multicast or ip_to_check.is_unspecified or ip_to_check.is_reserved:
+    if is_blocked:
         # 🛡️ Sentinel: Sanitize log input using repr() to prevent CRLF/Log Injection
         # IPv6 addresses can contain an arbitrary scope ID (e.g., %eth0\r\n) which is
         # not sanitized by ipaddress.ip_address() and could allow log spoofing.
