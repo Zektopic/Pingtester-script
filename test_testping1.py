@@ -215,6 +215,30 @@ class TestIsReachable(unittest.TestCase):
                 mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_ssrf_bypass_sixtofour(self, mock_call):
+        """Test is_reachable prevents SSRF bypass via 6to4 addresses."""
+        # 2002:7f00:0001:: encapsulates 127.0.0.1
+        # 2002:a9fe:a9fe:: encapsulates 169.254.169.254
+        ssrf_ips = ['2002:7f00:0001::', '2002:a9fe:a9fe::']
+        for ip in ssrf_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(ip))
+                self.assertIn("IP address not allowed for scanning", log.output[0])
+                mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_ssrf_bypass_teredo(self, mock_call):
+        """Test is_reachable prevents SSRF bypass via Teredo tunneling addresses."""
+        # 2001:0:7f00:0001:1c48:3a1c:a95a:b1fc encapsulates 127.0.0.1 as the server
+        # 2001:0:9d38:6ab8:1c48:3a1c:80ff:fffe encapsulates 127.0.0.1 as the client
+        ssrf_ips = ['2001:0:7f00:0001:1c48:3a1c:a95a:b1fc', '2001:0:9d38:6ab8:1c48:3a1c:80ff:fffe']
+        for ip in ssrf_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(ip))
+                self.assertIn("IP address not allowed for scanning", log.output[0])
+                mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_calls_ping_correctly(self, mock_call):
         """Test is_reachable calls the ping command with correct arguments."""
         from testping1 import PING_PATH, DEVNULL_FD
