@@ -80,7 +80,10 @@ def is_reachable(ip, timeout=1):
     # The python ipaddress module allows arbitrary characters (including \n and ;) in
     # the scope_id of IPv6 addresses. If unhandled, this can lead to argument
     # injection in the subprocess call or log injection.
-    if getattr(ip_obj, 'scope_id', None):
+    # ⚡ Bolt: Fast-path scope_id check using explicit type checking.
+    # Bypassing getattr() internal dictionary lookup and exception handling
+    # yields a speedup for this validation block.
+    if type(ip_obj) is ipaddress.IPv6Address and ip_obj.scope_id:
         if type(ip_obj.scope_id) is not str or not SCOPE_ID_REGEX.fullmatch(ip_obj.scope_id):
             try:
                 # Need to handle case where scope_id is an int and repr() fails inside ipaddress module
