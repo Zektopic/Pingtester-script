@@ -66,12 +66,12 @@ def is_reachable(ip, timeout=1):
         # which can crash the worker thread pool (DoS) if unhandled.
         try:
             ip_obj = ipaddress.ip_address(ip)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, RecursionError):
             # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
             # Handle ValueError from repr() on massive data structures
             try:
                 safe_ip = repr(ip)
-            except ValueError:
+            except (ValueError, TypeError, RecursionError):
                 safe_ip = "<unrepresentable>"
             logging.error(f"Invalid IP address format: {safe_ip}")
             return False
@@ -88,7 +88,7 @@ def is_reachable(ip, timeout=1):
             try:
                 # Need to handle case where scope_id is an int and repr() fails inside ipaddress module
                 safe_ip = repr(ip) if type(ip_obj.scope_id) is str else f"{ip_obj.__class__.__name__}('{ip_obj.compressed}%{ip_obj.scope_id}')"
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, RecursionError):
                 safe_ip = "<unrepresentable>"
             logging.error(f"Invalid IPv6 scope ID: {safe_ip}")
             return False
@@ -125,7 +125,7 @@ def is_reachable(ip, timeout=1):
         # not sanitized by ipaddress.ip_address() and could allow log spoofing.
         try:
             safe_ip = repr(ip)
-        except ValueError:
+        except (ValueError, TypeError, RecursionError):
             safe_ip = "<unrepresentable>"
         logging.error(f"IP address not allowed for scanning: {safe_ip}")
         return False
@@ -150,14 +150,14 @@ def is_reachable(ip, timeout=1):
             timeout_val = int(timeout)
             if timeout_val <= 0 or timeout_val > 100:
                 raise ValueError("Timeout must be a positive integer <= 100")
-        except (ValueError, TypeError, OverflowError):
+        except (ValueError, TypeError, OverflowError, RecursionError):
             # 🛡️ Sentinel: Catch OverflowError alongside ValueError/TypeError
             # Inputs originating from JSON can include Infinity (parsed as float)
             # which raises OverflowError when cast to int and crashes threads.
             # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
             try:
                 safe_timeout = repr(timeout)
-            except ValueError:
+            except (ValueError, TypeError, RecursionError):
                 safe_timeout = "<unrepresentable>"
             logging.error(f"Invalid timeout value: {safe_timeout}")
             return False

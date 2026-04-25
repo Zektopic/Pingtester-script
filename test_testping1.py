@@ -119,10 +119,14 @@ class TestIsReachable(unittest.TestCase):
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_unrepresentable_repr(self, mock_call):
-        """Test is_reachable handles ValueError during repr() safely."""
+        """Test is_reachable handles ValueError and RecursionError during repr() safely."""
         class MaliciousRepr:
             def __repr__(self):
                 raise ValueError("Exceeds limit")
+
+        class MaliciousRecursiveRepr:
+            def __repr__(self):
+                return repr(self)
 
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable(MaliciousRepr()))
@@ -131,6 +135,16 @@ class TestIsReachable(unittest.TestCase):
 
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('192.168.1.1', timeout=MaliciousRepr()))
+            self.assertIn("Invalid timeout value: <unrepresentable>", log.output[0])
+            mock_call.assert_not_called()
+
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable(MaliciousRecursiveRepr()))
+            self.assertIn("Invalid IP address format: <unrepresentable>", log.output[0])
+            mock_call.assert_not_called()
+
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable('192.168.1.1', timeout=MaliciousRecursiveRepr()))
             self.assertIn("Invalid timeout value: <unrepresentable>", log.output[0])
             mock_call.assert_not_called()
 
