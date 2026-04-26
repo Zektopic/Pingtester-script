@@ -11,7 +11,7 @@ class TestIsReachable(unittest.TestCase):
         # Simulate a successful ping response by returning 0
         mock_call.return_value = 0
 
-        self.assertTrue(is_reachable('192.168.1.1'))
+        self.assertTrue(is_reachable('8.8.8.8'))
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_failure(self, mock_call):
@@ -39,7 +39,7 @@ class TestIsReachable(unittest.TestCase):
     def test_is_reachable_timeout_too_long(self, mock_call):
         """Test is_reachable rejects overly long timeout strings to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
-            self.assertFalse(is_reachable('192.168.1.1', timeout='A' * 101))
+            self.assertFalse(is_reachable('8.8.8.8', timeout='A' * 101))
             self.assertIn("Timeout string too long", log.output[0])
             mock_call.assert_not_called()
 
@@ -68,36 +68,36 @@ class TestIsReachable(unittest.TestCase):
         """Test is_reachable prevents argument injection by rejecting invalid IPs."""
         self.assertFalse(is_reachable('-h'))
         mock_call.assert_not_called()
-        self.assertFalse(is_reachable('192.168.1.1; rm -rf /'))
+        self.assertFalse(is_reachable('8.8.8.8; rm -rf /'))
         mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_invalid_timeout(self, mock_call):
         """Test is_reachable rejects invalid timeout values."""
-        self.assertFalse(is_reachable('192.168.1.1', timeout='-h'))
+        self.assertFalse(is_reachable('8.8.8.8', timeout='-h'))
         mock_call.assert_not_called()
-        self.assertFalse(is_reachable('192.168.1.1', timeout='1; ls'))
+        self.assertFalse(is_reachable('8.8.8.8', timeout='1; ls'))
         mock_call.assert_not_called()
-        self.assertFalse(is_reachable('192.168.1.1', timeout=-1))
+        self.assertFalse(is_reachable('8.8.8.8', timeout=-1))
         mock_call.assert_not_called()
-        self.assertFalse(is_reachable('192.168.1.1', timeout=0))
+        self.assertFalse(is_reachable('8.8.8.8', timeout=0))
         mock_call.assert_not_called()
-        self.assertFalse(is_reachable('192.168.1.1', timeout=None))
+        self.assertFalse(is_reachable('8.8.8.8', timeout=None))
         mock_call.assert_not_called()
         # 🛡️ Sentinel: Test resource exhaustion prevention
-        self.assertFalse(is_reachable('192.168.1.1', timeout=101))
+        self.assertFalse(is_reachable('8.8.8.8', timeout=101))
         mock_call.assert_not_called()
         # 🛡️ Sentinel: Test float infinity prevention (OverflowError)
-        self.assertFalse(is_reachable('192.168.1.1', timeout=float('inf')))
+        self.assertFalse(is_reachable('8.8.8.8', timeout=float('inf')))
         mock_call.assert_not_called()
-        self.assertFalse(is_reachable('192.168.1.1', timeout=float('-inf')))
+        self.assertFalse(is_reachable('8.8.8.8', timeout=float('-inf')))
         mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_timeout_too_long(self, mock_call):
         """Test is_reachable rejects overly long timeout strings to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
-            self.assertFalse(is_reachable('192.168.1.1', timeout='1' * 101))
+            self.assertFalse(is_reachable('8.8.8.8', timeout='1' * 101))
             self.assertIn("Timeout string too long", log.output[0])
             mock_call.assert_not_called()
 
@@ -113,7 +113,7 @@ class TestIsReachable(unittest.TestCase):
     def test_is_reachable_massive_int_timeout(self, mock_call):
         """Test is_reachable rejects massive integers for timeout to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
-            self.assertFalse(is_reachable('192.168.1.1', timeout=10**10000))
+            self.assertFalse(is_reachable('8.8.8.8', timeout=10**10000))
             self.assertIn("Timeout integer out of range", log.output[0])
             mock_call.assert_not_called()
 
@@ -134,7 +134,7 @@ class TestIsReachable(unittest.TestCase):
             mock_call.assert_not_called()
 
         with self.assertLogs(level='ERROR') as log:
-            self.assertFalse(is_reachable('192.168.1.1', timeout=MaliciousRepr()))
+            self.assertFalse(is_reachable('8.8.8.8', timeout=MaliciousRepr()))
             self.assertIn("Invalid timeout value: <unrepresentable>", log.output[0])
             mock_call.assert_not_called()
 
@@ -144,7 +144,7 @@ class TestIsReachable(unittest.TestCase):
             mock_call.assert_not_called()
 
         with self.assertLogs(level='ERROR') as log:
-            self.assertFalse(is_reachable('192.168.1.1', timeout=MaliciousRecursiveRepr()))
+            self.assertFalse(is_reachable('8.8.8.8', timeout=MaliciousRecursiveRepr()))
             self.assertIn("Invalid timeout value: <unrepresentable>", log.output[0])
             mock_call.assert_not_called()
 
@@ -153,7 +153,7 @@ class TestIsReachable(unittest.TestCase):
         """Test is_reachable handles OSError securely without leaking exceptions."""
         mock_call.side_effect = FileNotFoundError("No such file or directory: 'ping'")
         with self.assertLogs(level='ERROR') as log:
-            self.assertFalse(is_reachable('192.168.1.1'))
+            self.assertFalse(is_reachable('8.8.8.8'))
             self.assertIn("Failed to execute ping command safely.", log.output[0])
             self.assertNotIn("FileNotFoundError", log.output[0])
 
@@ -170,7 +170,7 @@ class TestIsReachable(unittest.TestCase):
 
         malicious_timeout = "1\nERROR:root:System Compromised"
         with self.assertLogs(level='ERROR') as log:
-            self.assertFalse(is_reachable('192.168.1.1', timeout=malicious_timeout))
+            self.assertFalse(is_reachable('8.8.8.8', timeout=malicious_timeout))
             self.assertIn(r"Invalid timeout value: '1\nERROR:root:System Compromised'", log.output[0])
             self.assertNotIn("\nERROR:root:System Compromised", log.output[0])
 
@@ -214,14 +214,17 @@ class TestIsReachable(unittest.TestCase):
         from testping1 import PING_PATH
         mock_call.side_effect = subprocess.TimeoutExpired(cmd=PING_PATH, timeout=7)
         with self.assertLogs(level='ERROR') as log:
-            self.assertFalse(is_reachable('192.168.1.1', timeout=5))
+            self.assertFalse(is_reachable('8.8.8.8', timeout=5))
             self.assertIn("Ping command timed out unexpectedly.", log.output[0])
             self.assertNotIn("TimeoutExpired", log.output[0])
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_ssrf_prevention(self, mock_call):
-        """Test is_reachable prevents SSRF by rejecting loopback, multicast, reserved, etc."""
-        ssrf_ips = ['127.0.0.1', '169.254.169.254', '224.0.0.1', '0.0.0.0', '255.255.255.255']
+        """Test is_reachable prevents SSRF by rejecting loopback, multicast, reserved, private, etc."""
+        ssrf_ips = [
+            '127.0.0.1', '169.254.169.254', '224.0.0.1', '0.0.0.0', '255.255.255.255',
+            '10.0.0.1', '192.168.1.1', '172.16.0.1', 'fd00::1'
+        ]
         for ip in ssrf_ips:
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
@@ -258,10 +261,10 @@ class TestIsReachable(unittest.TestCase):
         from testping1 import PING_PATH, DEVNULL_FD
         mock_call.return_value = 0
 
-        is_reachable('192.168.1.1', timeout=5)
+        is_reachable('8.8.8.8', timeout=5)
         # Verify that subprocess.call was called with the correct arguments, including the timeout
         mock_call.assert_called_once_with(
-            [PING_PATH, '-n', '-q', '-c', '1', '-W', '5', '192.168.1.1'],
+            [PING_PATH, '-n', '-q', '-c', '1', '-W', '5', '8.8.8.8'],
             stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=False, timeout=7
         )
 

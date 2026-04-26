@@ -104,19 +104,19 @@ def is_reachable(ip, timeout=1):
     # ⚡ Bolt: Optimized SSRF check bypass by replacing `getattr()` with
     # explicit type checking. This avoids the internal dictionary lookup
     # and exception handling overhead of dynamic attribute access.
-    is_blocked = ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved
+    is_blocked = ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved or ip_obj.is_private
     if not is_blocked and type(ip_obj) is ipaddress.IPv6Address:
         if ip_obj.ipv4_mapped is not None:
             mapped = ip_obj.ipv4_mapped
-            is_blocked = mapped.is_loopback or mapped.is_link_local or mapped.is_multicast or mapped.is_unspecified or mapped.is_reserved
+            is_blocked = mapped.is_loopback or mapped.is_link_local or mapped.is_multicast or mapped.is_unspecified or mapped.is_reserved or mapped.is_private
         elif ip_obj.sixtofour is not None:
             s2f = ip_obj.sixtofour
-            is_blocked = s2f.is_loopback or s2f.is_link_local or s2f.is_multicast or s2f.is_unspecified or s2f.is_reserved
+            is_blocked = s2f.is_loopback or s2f.is_link_local or s2f.is_multicast or s2f.is_unspecified or s2f.is_reserved or s2f.is_private
         elif ip_obj.teredo is not None:
             t_srv, t_cli = ip_obj.teredo
             is_blocked = (
-                t_srv.is_loopback or t_srv.is_link_local or t_srv.is_multicast or t_srv.is_unspecified or t_srv.is_reserved or
-                t_cli.is_loopback or t_cli.is_link_local or t_cli.is_multicast or t_cli.is_unspecified or t_cli.is_reserved
+                t_srv.is_loopback or t_srv.is_link_local or t_srv.is_multicast or t_srv.is_unspecified or t_srv.is_reserved or t_srv.is_private or
+                t_cli.is_loopback or t_cli.is_link_local or t_cli.is_multicast or t_cli.is_unspecified or t_cli.is_reserved or t_cli.is_private
             )
 
     if is_blocked:
