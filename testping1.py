@@ -104,7 +104,9 @@ def is_reachable(ip, timeout=1):
     # ⚡ Bolt: Optimized SSRF check bypass by replacing `getattr()` with
     # explicit type checking. This avoids the internal dictionary lookup
     # and exception handling overhead of dynamic attribute access.
-    is_blocked = ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved or ip_obj.is_private
+    # 🛡️ Sentinel: Also block site-local IPv6 addresses (fec0::/10). They are deprecated
+    # but still routable internally and bypassed by is_private.
+    is_blocked = ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved or ip_obj.is_private or getattr(ip_obj, 'is_site_local', False)
     if not is_blocked and type(ip_obj) is ipaddress.IPv6Address:
         if ip_obj.ipv4_mapped is not None:
             mapped = ip_obj.ipv4_mapped
@@ -118,6 +120,18 @@ def is_reachable(ip, timeout=1):
                 t_srv.is_loopback or t_srv.is_link_local or t_srv.is_multicast or t_srv.is_unspecified or t_srv.is_reserved or t_srv.is_private or
                 t_cli.is_loopback or t_cli.is_link_local or t_cli.is_multicast or t_cli.is_unspecified or t_cli.is_reserved or t_cli.is_private
             )
+        else:
+            # 🛡️ Sentinel: Unpack NAT64 (RFC 6052) and IPv4-compatible (RFC 4291) addresses manually
+            # as Python's ipaddress module does not natively unwrap them for SSRF checks.
+            ip_int = int(ip_obj)
+            unwrapped = None
+            if ip_int >> 32 == 0x0064ff9b0000000000000000: # NAT64 64:ff9b::/96
+                unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
+            elif ip_int < 2**32 and ip_int not in (0, 1): # IPv4-compatible ::w.x.y.z
+                unwrapped = ipaddress.IPv4Address(ip_int)
+
+            if unwrapped is not None:
+                is_blocked = unwrapped.is_loopback or unwrapped.is_link_local or unwrapped.is_multicast or unwrapped.is_unspecified or unwrapped.is_reserved or unwrapped.is_private
 
     if is_blocked:
         # 🛡️ Sentinel: Sanitize log input using repr() to prevent CRLF/Log Injection
