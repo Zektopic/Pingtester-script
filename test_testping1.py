@@ -256,6 +256,26 @@ class TestIsReachable(unittest.TestCase):
                 mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_ssrf_bypass_nat64_and_compat(self, mock_call):
+        """Test is_reachable prevents SSRF bypass via NAT64 and IPv4-compatible addresses."""
+        ssrf_ips = ['64:ff9b::127.0.0.1', '64:ff9b::192.168.1.1', '::127.0.0.1', '::192.168.1.1']
+        for ip in ssrf_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(ip))
+                self.assertIn("IP address not allowed for scanning", log.output[0])
+                mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_ssrf_bypass_site_local(self, mock_call):
+        """Test is_reachable prevents SSRF bypass via deprecated site-local addresses."""
+        ssrf_ips = ['fec0::1', 'fec0::2', 'fec0::1234']
+        for ip in ssrf_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(ip))
+                self.assertIn("IP address not allowed for scanning", log.output[0])
+                mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_calls_ping_correctly(self, mock_call):
         """Test is_reachable calls the ping command with correct arguments."""
         from testping1 import PING_PATH, DEVNULL_FD
