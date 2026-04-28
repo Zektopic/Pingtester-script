@@ -64,6 +64,20 @@ class TestIsReachable(unittest.TestCase):
                 mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_ssrf_cgnat_and_non_global(self, mock_call):
+        """Test is_reachable prevents SSRF via CG-NAT and other non-global IP ranges."""
+        # Tests Carrier-Grade NAT (100.64.0.0/10), IPv4 dummy (192.0.0.0/24),
+        # benchmark tests (198.18.0.0/15) which may not be strictly caught by is_private.
+        ssrf_ips = [
+            '100.64.0.1', '192.0.0.1', '198.18.0.1', '198.51.100.1', '203.0.113.1', '192.0.2.1'
+        ]
+        for ip in ssrf_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(ip))
+                self.assertIn("IP address not allowed for scanning", log.output[0])
+                mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_argument_injection(self, mock_call):
         """Test is_reachable prevents argument injection by rejecting invalid IPs."""
         self.assertFalse(is_reachable('-h'))
