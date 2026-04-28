@@ -106,7 +106,7 @@ def is_reachable(ip, timeout=1):
     # and exception handling overhead of dynamic attribute access.
     # 🛡️ Sentinel: Also block site-local IPv6 addresses (fec0::/10). They are deprecated
     # but still routable internally and bypassed by is_private.
-    is_blocked = ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved or ip_obj.is_private or getattr(ip_obj, 'is_site_local', False)
+    is_blocked = ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved or ip_obj.is_private or (type(ip_obj) is ipaddress.IPv6Address and ip_obj.is_site_local)
     if not is_blocked and type(ip_obj) is ipaddress.IPv6Address:
         if ip_obj.ipv4_mapped is not None:
             mapped = ip_obj.ipv4_mapped
