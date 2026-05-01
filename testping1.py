@@ -185,7 +185,10 @@ def is_reachable(ip, timeout=1):
     # binary from allocating and formatting string output for every ICMP echo reply
     # it receives, slightly reducing CPU usage on the host OS when firing thousands
     # of concurrent pings.
-    command = [PING_PATH, "-n", "-q", "-c", "1", "-W", str(timeout_val), str(ip_obj)]  # -W for timeout in seconds (Linux)
+    # 🛡️ Sentinel: Prevent Argument Injection
+    # Adding '--' ensures that the subsequent operand (the IP address) is treated strictly
+    # as a positional argument and not interpreted as a flag (e.g., if it started with '-').
+    command = [PING_PATH, "-n", "-q", "-c", "1", "-W", str(timeout_val), "--", str(ip_obj)]  # -W for timeout in seconds (Linux)
 
     # ⚡ Bolt: Optimized ping execution by using subprocess.call and redirecting
     # output to DEVNULL instead of using Popen with PIPE.
