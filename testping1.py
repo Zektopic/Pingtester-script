@@ -55,9 +55,9 @@ def is_reachable(ip, timeout=1):
             return False
 
         # 🛡️ Sentinel: Add input length limit to prevent resource exhaustion (DoS)
-        # The ipaddress module can take significant time to parse extremely long strings
-        if isinstance(ip, str) and len(ip) > 100:
-            logging.error("IP address string too long")
+        # The ipaddress module can take significant time to parse extremely long strings or bytes
+        if isinstance(ip, (str, bytes)) and len(ip) > 100:
+            logging.error("IP address input too long")
             return False
 
         # 🛡️ Sentinel: Validate IP address to prevent argument injection
