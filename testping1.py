@@ -157,8 +157,8 @@ def is_reachable(ip, timeout=1):
     else:
         # 🛡️ Sentinel: Validate timeout length to prevent CPU exhaustion (DoS)
         # Python's int() conversion for massive strings has O(N^2) complexity.
-        if isinstance(timeout, str) and len(timeout) > 100:
-            logging.error("Timeout string too long")
+        if isinstance(timeout, (str, bytes)) and len(timeout) > 100:
+            logging.error("Timeout input too long")
             return False
 
         try:
