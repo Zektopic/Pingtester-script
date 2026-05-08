@@ -48,7 +48,15 @@ class TestIsReachable(unittest.TestCase):
         """Test is_reachable rejects overly long timeout strings to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('8.8.8.8', timeout='A' * 101))
-            self.assertIn("Timeout string too long", log.output[0])
+            self.assertIn("Timeout input too long", log.output[0])
+            mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
+    def test_is_reachable_timeout_bytes_too_long(self, mock_call):
+        """Test is_reachable rejects overly long timeout bytes to prevent DoS."""
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable('8.8.8.8', timeout=b'1' * 101))
+            self.assertIn("Timeout input too long", log.output[0])
             mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
@@ -112,11 +120,11 @@ class TestIsReachable(unittest.TestCase):
         mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
-    def test_is_reachable_timeout_too_long(self, mock_call):
-        """Test is_reachable rejects overly long timeout strings to prevent DoS."""
+    def test_is_reachable_timeout_too_long_numeric_string(self, mock_call):
+        """Test is_reachable rejects overly long numeric timeout strings to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('8.8.8.8', timeout='1' * 101))
-            self.assertIn("Timeout string too long", log.output[0])
+            self.assertIn("Timeout input too long", log.output[0])
             mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
