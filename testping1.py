@@ -128,14 +128,18 @@ def is_reachable(ip, timeout=1):
                 not t_cli.is_global or t_cli.is_multicast
             )
         else:
-            # 🛡️ Sentinel: Unpack NAT64 (RFC 6052) and IPv4-compatible (RFC 4291) addresses manually
-            # as Python's ipaddress module does not natively unwrap them for SSRF checks.
+            # 🛡️ Sentinel: Unpack NAT64 (RFC 6052), IPv4-compatible (RFC 4291), and ISATAP (RFC 5214)
+            # addresses manually as Python's ipaddress module does not natively unwrap them for SSRF checks.
             ip_int = int(ip_obj)
             unwrapped = None
             if ip_int >> 32 == 0x0064ff9b0000000000000000: # NAT64 64:ff9b::/96
                 unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
             elif ip_int < 2**32 and ip_int not in (0, 1): # IPv4-compatible ::w.x.y.z
                 unwrapped = ipaddress.IPv4Address(ip_int)
+            else:
+                isatap_identifier = (ip_int >> 32) & 0xFFFFFFFF
+                if isatap_identifier == 0x00005efe or isatap_identifier == 0x02005efe: # ISATAP
+                    unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
 
             if unwrapped is not None:
                 is_blocked = not unwrapped.is_global or unwrapped.is_multicast

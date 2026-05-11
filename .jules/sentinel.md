@@ -75,3 +75,8 @@
 **Vulnerability:** Python's `ipaddress.ip_address()` function accepts both `str` and `bytes`. When passing an extremely large bytes object (e.g., `b"A" * 10**8`), the module can take several seconds to raise a `ValueError` due to inefficient internal parsing logic, leading to a CPU exhaustion Denial of Service (DoS).
 **Learning:** Checking the length of `str` inputs before passing them to `ipaddress.ip_address()` is not sufficient to prevent DoS, as an attacker could pass a massive `bytes` object if the function accepts polymorphic types.
 **Prevention:** Always enforce strict length limits (e.g., <= 100 characters/bytes) on *both* `str` and `bytes` inputs before attempting to parse them using the `ipaddress` module. Use `isinstance(ip, (str, bytes))` and check `len()`.
+
+## 2024-05-11 - SSRF Bypass via ISATAP IPv6 Addresses
+**Vulnerability:** The application was vulnerable to an SSRF bypass when passed ISATAP tunneling addresses (e.g., `2001:db8::5efe:127.0.0.1` or `2001:db8::200:5efe:127.0.0.1`), which encapsulate a blocked internal IPv4 address.
+**Learning:** Python's `ipaddress` module evaluates these addresses as `is_global = True` and does not provide an `isatap` property to easily extract the embedded IPv4 address.
+**Prevention:** To prevent SSRF bypasses via ISATAP (RFC 5214) tunneling addresses, manually identify and unwrap the embedded IPv4 address. Extract the 32-bit ISATAP identifier using `(ip_int >> 32) & 0xFFFFFFFF` and check for `0x00005efe` or `0x02005efe`, then validate the underlying IPv4 address against SSRF rules.
