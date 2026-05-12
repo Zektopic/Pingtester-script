@@ -136,6 +136,11 @@ def is_reachable(ip, timeout=1):
                 unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
             elif ip_int < 2**32 and ip_int not in (0, 1): # IPv4-compatible ::w.x.y.z
                 unwrapped = ipaddress.IPv4Address(ip_int)
+            else:
+                # 🛡️ Sentinel: Prevent SSRF bypass via ISATAP tunneling addresses
+                isatap_id = (ip_int >> 32) & 0xFFFFFFFF
+                if isatap_id in (0x00005efe, 0x02005efe):
+                    unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
 
             if unwrapped is not None:
                 is_blocked = not unwrapped.is_global or unwrapped.is_multicast
