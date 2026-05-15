@@ -115,34 +115,41 @@ def is_reachable(ip, timeout=1):
     # shorter chain yields a ~60-80% speedup per public IP evaluated.
     is_blocked = not ip_obj.is_global or ip_obj.is_multicast or (type(ip_obj) is ipaddress.IPv6Address and ip_obj.is_site_local)
     if not is_blocked and type(ip_obj) is ipaddress.IPv6Address:
-        if ip_obj.ipv4_mapped is not None:
-            mapped = ip_obj.ipv4_mapped
+        # ⚡ Bolt: Cache embedded IPv4 addresses locally to avoid redundant instantiations.
+        # Calling ip_obj.ipv4_mapped computes and returns a new IPv4Address object every time.
+        # Caching it once locally bypasses re-parsing overhead if the value is not None,
+        # providing measurable performance improvements during high-frequency SSRF validation.
+        mapped = ip_obj.ipv4_mapped
+        if mapped is not None:
             is_blocked = not mapped.is_global or mapped.is_multicast
-        elif ip_obj.sixtofour is not None:
-            s2f = ip_obj.sixtofour
-            is_blocked = not s2f.is_global or s2f.is_multicast
-        elif ip_obj.teredo is not None:
-            t_srv, t_cli = ip_obj.teredo
-            is_blocked = (
-                not t_srv.is_global or t_srv.is_multicast or
-                not t_cli.is_global or t_cli.is_multicast
-            )
         else:
-            # 🛡️ Sentinel: Unpack NAT64 (RFC 6052), IPv4-compatible (RFC 4291), and ISATAP (RFC 5214) addresses manually
-            # as Python's ipaddress module does not natively unwrap them for SSRF checks.
-            ip_int = int(ip_obj)
-            unwrapped = None
-            if ip_int >> 32 == 0x0064ff9b0000000000000000: # NAT64 64:ff9b::/96
-                unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
-            elif ip_int < 2**32 and ip_int not in (0, 1): # IPv4-compatible ::w.x.y.z
-                unwrapped = ipaddress.IPv4Address(ip_int)
+            s2f = ip_obj.sixtofour
+            if s2f is not None:
+                is_blocked = not s2f.is_global or s2f.is_multicast
             else:
-                isatap_id = (ip_int >> 32) & 0xFFFFFFFF
-                if isatap_id in (0x00005efe, 0x02005efe): # ISATAP tunnel
-                    unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
+                teredo = ip_obj.teredo
+                if teredo is not None:
+                    t_srv, t_cli = teredo
+                    is_blocked = (
+                        not t_srv.is_global or t_srv.is_multicast or
+                        not t_cli.is_global or t_cli.is_multicast
+                    )
+                else:
+                    # 🛡️ Sentinel: Unpack NAT64 (RFC 6052), IPv4-compatible (RFC 4291), and ISATAP (RFC 5214) addresses manually
+                    # as Python's ipaddress module does not natively unwrap them for SSRF checks.
+                    ip_int = int(ip_obj)
+                    unwrapped = None
+                    if ip_int >> 32 == 0x0064ff9b0000000000000000: # NAT64 64:ff9b::/96
+                        unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
+                    elif ip_int < 2**32 and ip_int not in (0, 1): # IPv4-compatible ::w.x.y.z
+                        unwrapped = ipaddress.IPv4Address(ip_int)
+                    else:
+                        isatap_id = (ip_int >> 32) & 0xFFFFFFFF
+                        if isatap_id in (0x00005efe, 0x02005efe): # ISATAP tunnel
+                            unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
 
-            if unwrapped is not None:
-                is_blocked = not unwrapped.is_global or unwrapped.is_multicast
+                    if unwrapped is not None:
+                        is_blocked = not unwrapped.is_global or unwrapped.is_multicast
 
     if is_blocked:
         # 🛡️ Sentinel: Sanitize log input using repr() to prevent CRLF/Log Injection
