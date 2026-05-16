@@ -15,7 +15,9 @@ DEVNULL_FD = open(os.devnull, "wb")
 # Calling re.compile() once at module load avoids the overhead of parsing and compiling
 # the regular expression (or looking it up in the internal cache) during every is_reachable() execution.
 # This yields a measurable CPU speedup when firing thousands of concurrent pings.
-SCOPE_ID_REGEX = re.compile(r'[\w\-]+')
+# 🛡️ Sentinel: Enforce strict length limits (1-15 chars) and explicit ASCII charset
+# to prevent resource exhaustion or unexpected OS behavior from overly long/Unicode scope IDs.
+SCOPE_ID_REGEX = re.compile(r'[a-zA-Z0-9_\-]{1,15}')
 
 # ⚡ Bolt: Cache the absolute path of the ping executable.
 # Calling shutil.which() once at module load avoids the overhead of traversing

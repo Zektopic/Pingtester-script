@@ -247,6 +247,19 @@ class TestIsReachable(unittest.TestCase):
             mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_ipv6_scope_id_length_limit(self, mock_call):
+        """Test is_reachable enforces strict length limit on IPv6 scope IDs."""
+        import ipaddress
+        # Max Linux IFNAMSIZ is 15. Provide 16 chars.
+        malicious_ip_obj = ipaddress.IPv6Address('fe80::1')
+        malicious_ip_obj._scope_id = 'a' * 16
+
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable(malicious_ip_obj))
+            self.assertIn("Invalid IPv6 scope ID:", log.output[0])
+            mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_subprocess_timeout(self, mock_call):
         """Test is_reachable handles subprocess.TimeoutExpired securely."""
         from testping1 import PING_PATH
