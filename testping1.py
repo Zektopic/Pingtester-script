@@ -143,6 +143,8 @@ def is_reachable(ip, timeout=1):
                     unwrapped = None
                     if ip_int >> 32 == 0x0064ff9b0000000000000000: # NAT64 64:ff9b::/96
                         unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
+                    elif ip_int >> 32 == 0xffff0000: # SIIT (IPv4-translated) ::ffff:0:a.b.c.d
+                        unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
                     elif ip_int < 2**32 and ip_int not in (0, 1): # IPv4-compatible ::w.x.y.z
                         unwrapped = ipaddress.IPv4Address(ip_int)
                     else:
