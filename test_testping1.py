@@ -80,6 +80,17 @@ class TestIsReachable(unittest.TestCase):
                 mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_ssrf_bypass_siit(self, mock_call):
+        """Test is_reachable prevents SSRF bypass via SIIT (IPv4-translated) addresses."""
+        # ::ffff:0:a.b.c.d encapsulates an IPv4 address
+        ssrf_ips = ['::ffff:0:127.0.0.1', '::ffff:0:192.168.1.1']
+        for ip in ssrf_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(ip))
+                self.assertIn("IP address not allowed for scanning", log.output[0])
+                mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_ssrf_bypass_isatap(self, mock_call):
         """Test is_reachable prevents SSRF bypass via ISATAP tunneling addresses."""
         # 2001:db8::5efe:127.0.0.1 encapsulates 127.0.0.1

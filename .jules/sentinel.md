@@ -80,3 +80,8 @@
 **Vulnerability:** Python's `ipaddress` module evaluates ISATAP addresses (e.g., `2001:db8::5efe:127.0.0.1`) as `is_global = True` and lacks a native `is_isatap` property. This allows attackers to bypass SSRF validations by embedding private or reserved IPv4 addresses inside ISATAP IPv6 structures.
 **Learning:** `ipaddress` module does not intrinsically unwrap and validate all forms of IPv6 encapsulation.
 **Prevention:** To prevent SSRF bypasses via ISATAP tunneling addresses, manually identify and unwrap the embedded IPv4 address. Extract the 32-bit ISATAP identifier using `(ip_int >> 32) & 0xFFFFFFFF` and check for `0x00005efe` or `0x02005efe`, then validate the underlying IPv4 address against SSRF rules.
+
+## 2025-05-18 - SSRF Bypass via SIIT (IPv4-translated) Addresses
+**Vulnerability:** Attackers could bypass SSRF IP blocklists using SIIT (Stateless IP/ICMP Translation, RFC 2765) addresses. The format `::ffff:0:a.b.c.d` (using the `::ffff:0:0:0/96` prefix) evaluates as `is_global = True` in Python's `ipaddress` module and is NOT caught by the `ipv4_mapped` property. If an attacker passes such an address, the OS networking stack might route it directly to the embedded IPv4 target, bypassing internal security restrictions.
+**Learning:** Python's `ipaddress` module only natively extracts standard IPv4-mapped addresses (`::ffff:a.b.c.d`), failing to recognize or unwrap SIIT IPv4-translated addresses.
+**Prevention:** Always manually unwrap SIIT addresses by checking if the high 96 bits of the IPv6 integer match the SIIT prefix (`ip_int >> 32 == 0xffff0000`). If so, extract the underlying 32-bit IPv4 address using bitwise operations (`ip_int & 0xFFFFFFFF`) and validate it against the SSRF blocklist.
