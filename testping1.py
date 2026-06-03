@@ -243,6 +243,15 @@ if __name__ == "__main__":
     # Ensure start_ip and end_ip are valid IP addresses, are in the correct order,
     # and limit the maximum scan range to prevent resource exhaustion.
     try:
+        if type(start_ip) is int and (start_ip < 0 or start_ip > (2**128 - 1)):
+            raise ValueError("start_ip integer out of range")
+        if type(end_ip) is int and (end_ip < 0 or end_ip > (2**128 - 1)):
+            raise ValueError("end_ip integer out of range")
+        if isinstance(start_ip, (str, bytes)) and len(start_ip) > 100:
+            raise ValueError("start_ip input too long")
+        if isinstance(end_ip, (str, bytes)) and len(end_ip) > 100:
+            raise ValueError("end_ip input too long")
+
         start_obj = ipaddress.ip_address(start_ip)
         end_obj = ipaddress.ip_address(end_ip)
 
@@ -260,7 +269,7 @@ if __name__ == "__main__":
         if total_ips > 256:
             raise ValueError(f"Scan range too large ({total_ips} IPs). Maximum 256 IPs allowed per scan.")
 
-    except (ValueError, TypeError) as e:
+    except (ValueError, TypeError, RecursionError) as e:
         logging.error(f"Invalid scan range configuration: {e}")
         exit(1)
 
