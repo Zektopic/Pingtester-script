@@ -80,6 +80,16 @@ class TestIsReachable(unittest.TestCase):
                 mock_call.assert_not_called()
 
     @patch('testping1.subprocess.call')
+    def test_is_reachable_ssrf_bypass_local_use_translation(self, mock_call):
+        """Test is_reachable prevents SSRF bypass via Local-Use IPv4/IPv6 Translation addresses."""
+        ssrf_ips = ['64:ff9b:1::127.0.0.1', '64:ff9b:1::192.168.1.1']
+        for ip in ssrf_ips:
+            with self.assertLogs(level='ERROR') as log:
+                self.assertFalse(is_reachable(ip))
+                self.assertIn("IP address not allowed for scanning", log.output[0])
+                mock_call.assert_not_called()
+
+    @patch('testping1.subprocess.call')
     def test_is_reachable_ssrf_bypass_siit(self, mock_call):
         """Test is_reachable prevents SSRF bypass via SIIT (IPv4-translated) addresses."""
         # ::ffff:0:a.b.c.d encapsulates an IPv4 address
