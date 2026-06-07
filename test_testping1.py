@@ -319,8 +319,12 @@ class TestIsReachable(unittest.TestCase):
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_ssrf_bypass_nat64_and_compat(self, mock_call):
-        """Test is_reachable prevents SSRF bypass via NAT64 and IPv4-compatible addresses."""
-        ssrf_ips = ['64:ff9b::127.0.0.1', '64:ff9b::192.168.1.1', '::127.0.0.1', '::192.168.1.1']
+        """Test is_reachable prevents SSRF bypass via NAT64, Local-Use Translation (RFC 8215) and IPv4-compatible addresses."""
+        ssrf_ips = [
+            '64:ff9b::127.0.0.1', '64:ff9b::192.168.1.1',  # NAT64
+            '64:ff9b:1::127.0.0.1', '64:ff9b:1::192.168.1.1',  # Local-Use Translation (RFC 8215)
+            '::127.0.0.1', '::192.168.1.1'  # IPv4-compatible
+        ]
         for ip in ssrf_ips:
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
