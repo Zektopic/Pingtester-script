@@ -16,3 +16,7 @@
 ## 2024-05-09 - Redundant attributes in Python ipaddress
 **Learning:** By definition in Python's `ipaddress` module, `is_private`, `is_loopback`, `is_link_local`, `is_unspecified`, and `is_reserved` inherently evaluate as `is_global = False`. Evaluating them sequentially in an SSRF blocklist is highly redundant and slow.
 **Action:** When validating IPs for global routability, replace long chains like `ip.is_private or ip.is_loopback or ...` with a significantly faster logical reduction: `not ip.is_global or ip.is_multicast or (type(ip) is ipaddress.IPv6Address and ip.is_site_local)`. This reduces 8 checks down to 3 and yields massive performance gains on public IPs.
+
+## 2026-06-09 - Memory Optimization in ThreadPool Queueing
+**Learning:** When generating a large sequence of instantiated objects (like thousands of `ipaddress` objects) to queue into a `ThreadPoolExecutor`, using a list comprehension eager-allocates the entire list in memory, causing a massive initial memory spike (O(N)) before concurrent execution even begins.
+**Action:** Replace intermediate list comprehensions with generator expressions `(item for item in collection)` when feeding iterators directly into mapping or dictionary comprehensions for task submission. This drops intermediate allocation to O(1) memory and yields a slight speedup.
