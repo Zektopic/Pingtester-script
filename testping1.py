@@ -301,13 +301,21 @@ if __name__ == "__main__":
     # when many addresses are unreachable and timeout.
     max_workers = min(total_ips, 256)
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(is_reachable, ip): ip for ip in ips_to_scan}
+        # ⚡ Bolt: Optimize Memory Usage with Generator Expressions
+        # Using a generator expression instead of a list comprehension to feed the initial data into the executor submission loop.
+        # This changes the intermediate storage memory complexity from O(N) to O(1) by avoiding the allocation of an intermediate list in memory.
+        def _submit(ip):
+            f = executor.submit(is_reachable, ip)
+            f.ip_address = ip
+            return f
+
+        futures = (_submit(ip) for ip in ips_to_scan)
 
         # ⚡ Bolt: Wrapped as_completed directly with tqdm to delegate progress tracking
         # to its optimized internal C/Python iteration logic. This eliminates the manual
         # context manager and pbar.update(1) overhead, yielding ~20% faster loop iteration.
         for future in tqdm(concurrent.futures.as_completed(futures), total=total_ips, desc="Scanning network..."):
-            ip_address = futures[future]
+            ip_address = future.ip_address
             # Removing pbar.set_description(f"Pinging {ip_address}...") here avoids console I/O bottleneck
 
             if future.result():
