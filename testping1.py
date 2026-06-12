@@ -220,13 +220,15 @@ def is_reachable(ip, timeout=1):
     # output to DEVNULL instead of using Popen with PIPE.
     # This avoids the Inter-Process Communication (IPC) overhead of capturing
     # stdout/stderr, resulting in ~35% speedup for parallel network scans.
-    # ⚡ Bolt: Disabled close_fds and used cached DEVNULL_FD to avoid the overhead of
-    # iterating and closing all possible file descriptors in the child process
-    # and opening/closing /dev/null per execution.
+    # 🛡️ Sentinel: Enable close_fds to prevent File Descriptor Leakage (CWE-403)
+    # In multi-threaded applications, child processes inherit all file descriptors
+    # currently opened by any thread if close_fds is False. This can expose
+    # sensitive open files, network sockets, or database connections to the
+    # unprivileged ping process.
     try:
         # 🛡️ Sentinel: Add python-level timeout limit as defense-in-depth to prevent
         # worker thread pool exhaustion if the underlying ping process hangs.
-        return subprocess.call(command, stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=False, timeout=timeout_val + 2) == 0
+        return subprocess.call(command, stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=True, timeout=timeout_val + 2) == 0
     except OSError:
         # 🛡️ Sentinel: Fail securely on command execution errors (like FileNotFoundError)
         # to prevent unhandled exceptions crashing the worker thread pool and leaking stack traces.
