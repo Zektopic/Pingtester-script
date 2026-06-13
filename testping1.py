@@ -23,7 +23,11 @@ SCOPE_ID_REGEX = re.compile(r'[a-zA-Z0-9_\-]{1,15}')
 # Calling shutil.which() once at module load avoids the overhead of traversing
 # the system PATH environment variable during every subprocess.call() execution.
 # This yields a measurable speedup when firing thousands of concurrent pings.
-PING_PATH = shutil.which("ping")
+# 🛡️ Sentinel: Enforce secure path resolution for system binaries.
+# Passing an explicit trusted path prevents local PATH interception attacks,
+# where an attacker places a malicious executable in a user-writable directory
+# included early in the system PATH.
+PING_PATH = shutil.which("ping", path="/bin:/usr/bin:/sbin:/usr/sbin")
 if not PING_PATH:
     # 🛡️ Sentinel: Fail securely if the required system binary is missing, rather than
     # falling back to a relative path ("ping") which could execute a malicious local file.
