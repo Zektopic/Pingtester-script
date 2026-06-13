@@ -12,6 +12,7 @@ class TestIsReachable(unittest.TestCase):
         mock_call.return_value = 0
 
         self.assertTrue(is_reachable('8.8.8.8'))
+        mock_call.assert_called_once()
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_failure(self, mock_call):
@@ -19,7 +20,9 @@ class TestIsReachable(unittest.TestCase):
         # Simulate a failed ping response by returning a non-zero exit code
         mock_call.return_value = 1
 
-        self.assertFalse(is_reachable('10.0.0.1'))
+        # 🛡️ Sentinel: Use a public IP to ensure SSRF blocklist doesn't bypass network logic test
+        self.assertFalse(is_reachable('8.8.4.4'))
+        mock_call.assert_called_once()
 
     @patch('testping1.subprocess.call')
     def test_is_reachable_invalid_ip_format(self, mock_call):
