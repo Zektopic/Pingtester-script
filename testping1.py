@@ -250,7 +250,9 @@ if __name__ == "__main__":
             raise ValueError(f"Scan range too large ({total_ips} IPs). Maximum 256 IPs allowed per scan.")
 
     except (ValueError, TypeError) as e:
-        logging.error(f"Invalid scan range configuration: {e}")
+        # 🛡️ Sentinel: Sanitize log input to prevent CRLF/Log Injection
+        # The exception message contains the unparsed, potentially malicious IP string.
+        logging.error(f"Invalid scan range configuration: {repr(str(e))}")
         exit(1)
 
     # ⚡ Bolt: Optimize sequential IP address generation
