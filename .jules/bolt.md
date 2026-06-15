@@ -20,3 +20,7 @@
 ## 2024-05-09 - Optimize Memory Usage with Generator Expressions
 **Learning:** When queueing a large sequence of tasks into a `ThreadPoolExecutor` or creating a dictionary of futures from a sequence, using a list comprehension pre-allocates all objects in memory. For large lists, this creates an O(N) memory spike.
 **Action:** Use a generator expression instead of a list comprehension to feed the initial data into the executor submission loop. This changes the intermediate storage memory complexity from O(N) to O(1) by avoiding the allocation of an intermediate list in memory.
+
+## 2026-06-15 - Cache bitwise shift operations on massive integers
+**Learning:** Python's implementation of arbitrary-precision integers means bitwise operations (like `>> 32`) on 128-bit integers (IPv6 addresses) carry a small overhead. Performing the exact same shift multiple times in an `if/elif` chain adds up during high-frequency validation loops.
+**Action:** Cache the result of repetitive bitwise operations (`ip_high_96 = ip_int >> 32`) into a local variable before using it in sequential `if/elif` statements to avoid redundant computation and gain a measurable fast-path speedup.

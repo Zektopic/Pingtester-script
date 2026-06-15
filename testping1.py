@@ -150,14 +150,17 @@ def is_reachable(ip, timeout=1):
                     # as Python's ipaddress module does not natively unwrap them for SSRF checks.
                     ip_int = int(ip_obj)
                     unwrapped = None
-                    if ip_int >> 32 == 0x0064ff9b0000000000000000: # NAT64 64:ff9b::/96
+                    # ⚡ Bolt: Cache the high 96 bits of the IPv6 integer to avoid computing
+                    # the bitwise shift operation up to four times during manual unwrapping validation.
+                    ip_high_96 = ip_int >> 32
+                    if ip_high_96 == 0x0064ff9b0000000000000000: # NAT64 64:ff9b::/96
                         unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
-                    elif ip_int >> 32 == 0xffff0000: # SIIT (IPv4-translated) ::ffff:0:a.b.c.d
+                    elif ip_high_96 == 0xffff0000: # SIIT (IPv4-translated) ::ffff:0:a.b.c.d
                         unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
                     elif ip_int < 2**32 and ip_int not in (0, 1): # IPv4-compatible ::w.x.y.z
                         unwrapped = ipaddress.IPv4Address(ip_int)
                     else:
-                        isatap_id = (ip_int >> 32) & 0xFFFFFFFF
+                        isatap_id = ip_high_96 & 0xFFFFFFFF
                         if isatap_id in (0x00005efe, 0x02005efe): # ISATAP tunnel
                             unwrapped = ipaddress.IPv4Address(ip_int & 0xFFFFFFFF)
 
