@@ -292,6 +292,7 @@ if __name__ == "__main__":
     except (ValueError, TypeError, RecursionError) as e:
         # 🛡️ Sentinel: Prevent Log Injection (CRLF) in shared exception handlers.
         # While ipaddress exceptions may be safe, broad handlers might catch un-sanitized exceptions.
+        # 🛡️ Sentinel: Sanitize exception message to prevent CRLF/Log Injection
         logging.error(f"Invalid scan range configuration: {repr(str(e))}")
         exit(1)
 

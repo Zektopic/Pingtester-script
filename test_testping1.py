@@ -353,5 +353,38 @@ class TestIsReachable(unittest.TestCase):
             stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=True, timeout=7
         )
 
+    def test_main_block_log_injection_prevention(self):
+        """Test the __main__ block prevents CRLF log injection via malicious start_ip exceptions."""
+        import os
+        import tempfile
+
+        # Create a temporary copy of testping1.py that accepts start_ip from env vars
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as temp_script:
+            with open("testping1.py", "r") as original:
+                content = original.read()
+                # Inject a modification to read start_ip from an environment variable to allow injecting the payload
+                content = content.replace('start_ip = "192.168.43.1"', 'import os; start_ip = os.environ.get("MALICIOUS_IP", "192.168.43.1")')
+                temp_script.write(content)
+            temp_script_path = temp_script.name
+
+        try:
+            env = os.environ.copy()
+            malicious_payload = "192.168.43.1\nERROR:root:System Compromised"
+            env["MALICIOUS_IP"] = malicious_payload
+
+            result = subprocess.run(
+                ["python3", temp_script_path],
+                capture_output=True,
+                text=True,
+                env=env
+            )
+
+            # The exception should be securely escaped (e.g., \n instead of a real newline)
+            self.assertIn("Invalid scan range configuration: \"'192.168.43.1\\\\nERROR:root:System Compromised' does not appear to be an IPv4 or IPv6 address\"", result.stderr)
+            self.assertNotIn("\nERROR:root:System Compromised", result.stderr)
+        finally:
+            if os.path.exists(temp_script_path):
+                os.remove(temp_script_path)
+
 if __name__ == '__main__':
     unittest.main()
