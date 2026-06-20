@@ -386,5 +386,43 @@ class TestIsReachable(unittest.TestCase):
             if os.path.exists(temp_script_path):
                 os.remove(temp_script_path)
 
+    def test_main_block_log_injection(self):
+        """Test that the main block escapes exceptions properly to prevent log injection."""
+        import tempfile
+        import os
+
+        import sys
+
+        # We will dynamically execute the __main__ block code and mock start_ip with malicious payload
+        with open("testping1.py", "r") as f:
+            code = f.read()
+
+        # Find the main block and extract its body
+        main_block_idx = code.find('if __name__ == "__main__":')
+        self.assertNotEqual(main_block_idx, -1)
+
+        import re
+        # Replace the hardcoded IPs to trigger ValueError with newline
+        malicious_code = re.sub(
+            r'start_ip\s*=\s*["\'].*?["\']',
+            'start_ip = "192.168.43.1\\\\nERROR: system compromised"',
+            code
+        )
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as tmp:
+            tmp.write(malicious_code)
+            tmp_name = tmp.name
+
+        try:
+            result = subprocess.run(
+                [sys.executable, tmp_name],
+                capture_output=True,
+                text=True
+            )
+            self.assertIn(r"Invalid scan range configuration: " + '"' + r"'192.168.43.1\\nERROR: system compromised' does not appear to be an IPv4 or IPv6 address" + '"', result.stderr)
+            self.assertNotIn("\nERROR: system compromised", result.stderr)
+        finally:
+            os.unlink(tmp_name)
+
 if __name__ == '__main__':
     unittest.main()
