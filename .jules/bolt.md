@@ -28,3 +28,7 @@
 ## 2026-06-20 - Eliminate redundant IP type evaluation in fast-path validation
 **Learning:** In fast-path validation blocks handling multiple primitive types where type constraints are mutually exclusive, chaining combined type constraints (`if type(x) is A or type(x) is B`) and later independently re-evaluating the specific type (`is_B = type(x) is B`) creates redundant internal type checking overhead.
 **Action:** Structurally organize fast-path conditionals into explicitly split branches (e.g., `if type(x) is A: is_B = False; elif type(x) is B: is_B = True`) to evaluate, assign, and bind dependent state booleans in a single pass without recomputing type identities.
+
+## 2026-06-09 - Memory Optimization in ThreadPool Queueing
+**Learning:** When generating a large sequence of instantiated objects (like thousands of `ipaddress` objects) to queue into a `ThreadPoolExecutor`, using a list comprehension eager-allocates the entire list in memory, causing a massive initial memory spike (O(N)) before concurrent execution even begins.
+**Action:** Replace intermediate list comprehensions with generator expressions `(item for item in collection)` when feeding iterators directly into mapping or dictionary comprehensions for task submission. This drops intermediate allocation to O(1) memory and yields a slight speedup.

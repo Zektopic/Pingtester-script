@@ -303,6 +303,11 @@ if __name__ == "__main__":
     base_int = int(start_obj)
     ip_class = type(start_obj)
     # ⚡ Bolt: Pass pre-instantiated IP objects to worker threads to avoid string parsing overhead
+
+
+    # ⚡ Bolt: Replaced list comprehension with generator expression to lazily evaluate IPs.
+    # This prevents allocating O(N) memory for the intermediate list before passing to the ThreadPoolExecutor.
+
     ips_to_scan = (ip_class(base_int + i) for i in range(total_ips))
 
     # ⚡ Bolt: Parallelize network scanning using ThreadPoolExecutor
