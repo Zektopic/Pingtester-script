@@ -24,3 +24,7 @@
 ## 2026-06-15 - Cache bitwise shift operations on massive integers
 **Learning:** Python's implementation of arbitrary-precision integers means bitwise operations (like `>> 32`) on 128-bit integers (IPv6 addresses) carry a small overhead. Performing the exact same shift multiple times in an `if/elif` chain adds up during high-frequency validation loops.
 **Action:** Cache the result of repetitive bitwise operations (`ip_high_96 = ip_int >> 32`) into a local variable before using it in sequential `if/elif` statements to avoid redundant computation and gain a measurable fast-path speedup.
+
+## 2026-06-20 - Eliminate redundant IP type evaluation in fast-path validation
+**Learning:** In fast-path validation blocks handling multiple primitive types where type constraints are mutually exclusive, chaining combined type constraints (`if type(x) is A or type(x) is B`) and later independently re-evaluating the specific type (`is_B = type(x) is B`) creates redundant internal type checking overhead.
+**Action:** Structurally organize fast-path conditionals into explicitly split branches (e.g., `if type(x) is A: is_B = False; elif type(x) is B: is_B = True`) to evaluate, assign, and bind dependent state booleans in a single pass without recomputing type identities.
