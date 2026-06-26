@@ -245,7 +245,7 @@ def is_reachable(ip, timeout=1):
     try:
         # 🛡️ Sentinel: Add python-level timeout limit as defense-in-depth to prevent
         # worker thread pool exhaustion if the underlying ping process hangs.
-        return subprocess.call(command, stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=True, timeout=timeout_val + 2) == 0  # nosec B603
+        return subprocess.run(command, stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=True, timeout=timeout_val + 2).returncode == 0  # nosec B603
     except OSError:
         # 🛡️ Sentinel: Fail securely on command execution errors (like FileNotFoundError)
         # to prevent unhandled exceptions crashing the worker thread pool and leaking stack traces.

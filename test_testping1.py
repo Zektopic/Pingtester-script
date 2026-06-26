@@ -5,85 +5,85 @@ from testping1 import is_reachable
 
 class TestIsReachable(unittest.TestCase):
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_success(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_success(self, mock_run):
         """Test is_reachable returns True for a successful ping."""
         # Simulate a successful ping response by returning 0
-        mock_call.return_value = 0
+        mock_run.return_value.returncode = 0
 
         self.assertTrue(is_reachable('8.8.8.8'))
-        mock_call.assert_called_once()
+        mock_run.assert_called_once()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_failure(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_failure(self, mock_run):
         """Test is_reachable returns False for a failed ping."""
         # Simulate a failed ping response by returning a non-zero exit code
-        mock_call.return_value = 1
+        mock_run.return_value.returncode = 1
 
         # 🛡️ Sentinel: Use a public IP to ensure SSRF blocklist doesn't bypass network logic test
         self.assertFalse(is_reachable('8.8.4.4'))
-        mock_call.assert_called_once()
+        mock_run.assert_called_once()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_invalid_ip_format(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_invalid_ip_format(self, mock_run):
         """Test is_reachable returns False and does not call subprocess for invalid IP."""
         self.assertFalse(is_reachable('invalid_ip'))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ip_too_long(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ip_too_long(self, mock_run):
         """Test is_reachable rejects overly long IP strings to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('A' * 101))
             self.assertIn("IP address input too long", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ip_bytes_too_long(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ip_bytes_too_long(self, mock_run):
         """Test is_reachable rejects overly long IP bytes to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable(b'A' * 101))
             self.assertIn("IP address input too long", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_timeout_too_long(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_timeout_too_long(self, mock_run):
         """Test is_reachable rejects overly long timeout strings to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('8.8.8.8', timeout='A' * 101))
             self.assertIn("Timeout input too long", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_timeout_bytes_too_long(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_timeout_bytes_too_long(self, mock_run):
         """Test is_reachable rejects overly long timeout bytes to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('8.8.8.8', timeout=b'1' * 101))
             self.assertIn("Timeout input too long", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_type_error(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_type_error(self, mock_run):
         """Test is_reachable gracefully handles inputs that raise TypeError."""
         invalid_ips = [None, [], {}, ()]
         for invalid_ip in invalid_ips:
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(invalid_ip))
                 self.assertIn(f"Invalid IP address format: {repr(invalid_ip)}", log.output[0])
-                mock_call.assert_not_called()
+                mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ssrf_bypass_ipv4_mapped(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ssrf_bypass_ipv4_mapped(self, mock_run):
         """Test is_reachable prevents SSRF bypass via IPv4-mapped IPv6 addresses."""
         ssrf_mapped_ips = ['::ffff:127.0.0.1', '::ffff:169.254.169.254', '::ffff:224.0.0.1', '::ffff:0.0.0.0', '::ffff:255.255.255.255']
         for ip in ssrf_mapped_ips:
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
                 self.assertIn("IP address not allowed for scanning", log.output[0])
-                mock_call.assert_not_called()
+                mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ssrf_bypass_siit(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ssrf_bypass_siit(self, mock_run):
         """Test is_reachable prevents SSRF bypass via SIIT (IPv4-translated) addresses."""
         # ::ffff:0:a.b.c.d encapsulates an IPv4 address
         ssrf_ips = ['::ffff:0:127.0.0.1', '::ffff:0:192.168.1.1']
@@ -91,10 +91,10 @@ class TestIsReachable(unittest.TestCase):
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
                 self.assertIn("IP address not allowed for scanning", log.output[0])
-                mock_call.assert_not_called()
+                mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ssrf_bypass_isatap(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ssrf_bypass_isatap(self, mock_run):
         """Test is_reachable prevents SSRF bypass via ISATAP tunneling addresses."""
         # 2001:db8::5efe:127.0.0.1 encapsulates 127.0.0.1
         # 2001:db8::200:5efe:192.168.1.1 encapsulates 192.168.1.1
@@ -103,74 +103,74 @@ class TestIsReachable(unittest.TestCase):
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
                 self.assertIn("IP address not allowed for scanning", log.output[0])
-                mock_call.assert_not_called()
+                mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ssrf_cgnat_prevention(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ssrf_cgnat_prevention(self, mock_run):
         """Test is_reachable prevents SSRF by rejecting Carrier-Grade NAT (CGNAT) IPs."""
         ssrf_ips = ['100.64.0.1', '100.127.255.254', '198.18.0.1']
         for ip in ssrf_ips:
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
                 self.assertIn("IP address not allowed for scanning", log.output[0])
-                mock_call.assert_not_called()
+                mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_argument_injection(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_argument_injection(self, mock_run):
         """Test is_reachable prevents argument injection by rejecting invalid IPs."""
         self.assertFalse(is_reachable('-h'))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
         self.assertFalse(is_reachable('8.8.8.8; rm -rf /'))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_invalid_timeout(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_invalid_timeout(self, mock_run):
         """Test is_reachable rejects invalid timeout values."""
         self.assertFalse(is_reachable('8.8.8.8', timeout='-h'))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
         self.assertFalse(is_reachable('8.8.8.8', timeout='1; ls'))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
         self.assertFalse(is_reachable('8.8.8.8', timeout=-1))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
         self.assertFalse(is_reachable('8.8.8.8', timeout=0))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
         self.assertFalse(is_reachable('8.8.8.8', timeout=None))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
         # 🛡️ Sentinel: Test resource exhaustion prevention
         self.assertFalse(is_reachable('8.8.8.8', timeout=101))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
         # 🛡️ Sentinel: Test float infinity prevention (OverflowError)
         self.assertFalse(is_reachable('8.8.8.8', timeout=float('inf')))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
         self.assertFalse(is_reachable('8.8.8.8', timeout=float('-inf')))
-        mock_call.assert_not_called()
+        mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_timeout_too_long_numeric_string(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_timeout_too_long_numeric_string(self, mock_run):
         """Test is_reachable rejects overly long numeric timeout strings to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('8.8.8.8', timeout='1' * 101))
             self.assertIn("Timeout input too long", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_massive_int_ip(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_massive_int_ip(self, mock_run):
         """Test is_reachable rejects massive integers for IP to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable(10**10000))
             self.assertIn("IP address integer out of range", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_massive_int_timeout(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_massive_int_timeout(self, mock_run):
         """Test is_reachable rejects massive integers for timeout to prevent DoS."""
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('8.8.8.8', timeout=10**10000))
             self.assertIn("Timeout integer out of range", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_unrepresentable_repr(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_unrepresentable_repr(self, mock_run):
         """Test is_reachable handles ValueError and RecursionError during repr() safely."""
         class MaliciousRepr:
             def __repr__(self):
@@ -183,34 +183,34 @@ class TestIsReachable(unittest.TestCase):
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable(MaliciousRepr()))
             self.assertIn("Invalid IP address format: <unrepresentable>", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('8.8.8.8', timeout=MaliciousRepr()))
             self.assertIn("Invalid timeout value: <unrepresentable>", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable(MaliciousRecursiveRepr()))
             self.assertIn("Invalid IP address format: <unrepresentable>", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('8.8.8.8', timeout=MaliciousRecursiveRepr()))
             self.assertIn("Invalid timeout value: <unrepresentable>", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_secure_error_handling(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_secure_error_handling(self, mock_run):
         """Test is_reachable handles OSError securely without leaking exceptions."""
-        mock_call.side_effect = FileNotFoundError("No such file or directory: 'ping'")
+        mock_run.side_effect = FileNotFoundError("No such file or directory: 'ping'")
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('8.8.8.8'))
             self.assertIn("Failed to execute ping command safely.", log.output[0])
             self.assertNotIn("FileNotFoundError", log.output[0])
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_prevents_log_injection(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_prevents_log_injection(self, mock_run):
         """Test is_reachable escapes user input to prevent log injection (CRLF)."""
         malicious_ip = "127.0.0.1\nERROR:root:System Compromised"
 
@@ -226,8 +226,8 @@ class TestIsReachable(unittest.TestCase):
             self.assertIn(r"Invalid timeout value: '1\nERROR:root:System Compromised'", log.output[0])
             self.assertNotIn("\nERROR:root:System Compromised", log.output[0])
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ssrf_log_injection(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ssrf_log_injection(self, mock_run):
         """Test is_reachable escapes log injection in the SSRF block using an IPv6 scope ID."""
         # IPv6 permits a scope ID which can bypass validation if it contains a newline.
         # This tests that the original `ip` string is escaped when logged by the SSRF filter.
@@ -237,10 +237,10 @@ class TestIsReachable(unittest.TestCase):
             self.assertFalse(is_reachable(malicious_ip))
             self.assertIn(r"Invalid IPv6 scope ID: 'fe80::1%eth0\nERROR:root:System Compromised'", log.output[0])
             self.assertNotIn("\nERROR:root:System Compromised", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ipv6_scope_id_validation(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ipv6_scope_id_validation(self, mock_run):
         """Test is_reachable rejects arbitrary and potentially malicious IPv6 scope_ids."""
         import ipaddress
         # Manually instantiate and inject malicious scope_id to bypass parsing
@@ -250,7 +250,7 @@ class TestIsReachable(unittest.TestCase):
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable(malicious_ip_obj))
             self.assertIn("Invalid IPv6 scope ID: IPv6Address('fe80::1%eth0; ls')", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
         malicious_ip_obj2 = ipaddress.IPv6Address('fe80::1')
         malicious_ip_obj2._scope_id = 'eth0\nERROR:root:Compromised'
@@ -258,10 +258,10 @@ class TestIsReachable(unittest.TestCase):
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable(malicious_ip_obj2))
             self.assertIn("Invalid IPv6 scope ID: IPv6Address('fe80::1%eth0\\nERROR:root:Compromised')", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ipv6_scope_id_length_limit(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ipv6_scope_id_length_limit(self, mock_run):
         """Test is_reachable enforces strict length limit on IPv6 scope IDs."""
         import ipaddress
         # Max Linux IFNAMSIZ is 15. Provide 16 chars.
@@ -271,20 +271,20 @@ class TestIsReachable(unittest.TestCase):
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable(malicious_ip_obj))
             self.assertIn("Invalid IPv6 scope ID:", log.output[0])
-            mock_call.assert_not_called()
+            mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_subprocess_timeout(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_subprocess_timeout(self, mock_run):
         """Test is_reachable handles subprocess.TimeoutExpired securely."""
         from testping1 import PING_PATH
-        mock_call.side_effect = subprocess.TimeoutExpired(cmd=PING_PATH, timeout=7)
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd=PING_PATH, timeout=7)
         with self.assertLogs(level='ERROR') as log:
             self.assertFalse(is_reachable('8.8.8.8', timeout=5))
             self.assertIn("Ping command timed out unexpectedly.", log.output[0])
             self.assertNotIn("TimeoutExpired", log.output[0])
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ssrf_prevention(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ssrf_prevention(self, mock_run):
         """Test is_reachable prevents SSRF by rejecting loopback, multicast, reserved, private, etc."""
         ssrf_ips = [
             '127.0.0.1', '169.254.169.254', '224.0.0.1', '0.0.0.0', '255.255.255.255',
@@ -294,10 +294,10 @@ class TestIsReachable(unittest.TestCase):
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
                 self.assertIn("IP address not allowed for scanning", log.output[0])
-                mock_call.assert_not_called()
+                mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ssrf_bypass_sixtofour(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ssrf_bypass_sixtofour(self, mock_run):
         """Test is_reachable prevents SSRF bypass via 6to4 addresses."""
         # 2002:7f00:0001:: encapsulates 127.0.0.1
         # 2002:a9fe:a9fe:: encapsulates 169.254.169.254
@@ -306,10 +306,10 @@ class TestIsReachable(unittest.TestCase):
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
                 self.assertIn("IP address not allowed for scanning", log.output[0])
-                mock_call.assert_not_called()
+                mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ssrf_bypass_teredo(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ssrf_bypass_teredo(self, mock_run):
         """Test is_reachable prevents SSRF bypass via Teredo tunneling addresses."""
         # 2001:0:7f00:0001:1c48:3a1c:a95a:b1fc encapsulates 127.0.0.1 as the server
         # 2001:0:9d38:6ab8:1c48:3a1c:80ff:fffe encapsulates 127.0.0.1 as the client
@@ -318,37 +318,37 @@ class TestIsReachable(unittest.TestCase):
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
                 self.assertIn("IP address not allowed for scanning", log.output[0])
-                mock_call.assert_not_called()
+                mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ssrf_bypass_nat64_and_compat(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ssrf_bypass_nat64_and_compat(self, mock_run):
         """Test is_reachable prevents SSRF bypass via NAT64 and IPv4-compatible addresses."""
         ssrf_ips = ['64:ff9b::127.0.0.1', '64:ff9b::192.168.1.1', '::127.0.0.1', '::192.168.1.1']
         for ip in ssrf_ips:
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
                 self.assertIn("IP address not allowed for scanning", log.output[0])
-                mock_call.assert_not_called()
+                mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_ssrf_bypass_site_local(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_ssrf_bypass_site_local(self, mock_run):
         """Test is_reachable prevents SSRF bypass via deprecated site-local addresses."""
         ssrf_ips = ['fec0::1', 'fec0::2', 'fec0::1234']
         for ip in ssrf_ips:
             with self.assertLogs(level='ERROR') as log:
                 self.assertFalse(is_reachable(ip))
                 self.assertIn("IP address not allowed for scanning", log.output[0])
-                mock_call.assert_not_called()
+                mock_run.assert_not_called()
 
-    @patch('testping1.subprocess.call')
-    def test_is_reachable_calls_ping_correctly(self, mock_call):
+    @patch('testping1.subprocess.run')
+    def test_is_reachable_calls_ping_correctly(self, mock_run):
         """Test is_reachable calls the ping command with correct arguments."""
         from testping1 import PING_PATH, DEVNULL_FD
-        mock_call.return_value = 0
+        mock_run.return_value.returncode = 0
 
         is_reachable('8.8.8.8', timeout=5)
         # Verify that subprocess.call was called with the correct arguments, including the timeout
-        mock_call.assert_called_once_with(
+        mock_run.assert_called_once_with(
             [PING_PATH, '-n', '-q', '-c', '1', '-W', '5', '--', '8.8.8.8'],
             stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=True, timeout=7
         )
