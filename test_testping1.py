@@ -350,7 +350,7 @@ class TestIsReachable(unittest.TestCase):
         # Verify that subprocess.call was called with the correct arguments, including the timeout
         mock_run.assert_called_once_with(
             [PING_PATH, '-n', '-q', '-c', '1', '-W', '5', '--', '8.8.8.8'],
-            stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=True, env={}, timeout=7
+            stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=True, timeout=7
         )
 
     def test_main_block_log_injection_prevention(self):
