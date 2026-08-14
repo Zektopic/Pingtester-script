@@ -115,3 +115,9 @@
 **Vulnerability:** Stripping all environment variables by passing `env={}` to `subprocess.run()` for a standard binary like `ping` can break things because essential variables like `PATH` and `SystemRoot` are stripped.
 **Learning:** While system binaries inherit their execution environment, blindly clearing it (e.g., passing `env={}`) for standard benign utilities like `ping` is 'security theater' and introduces regressions.
 **Prevention:** Only explicitly define or clear the environment if the target utility is known to log, exfiltrate, or unsafely consume environment variables. Leave `env` alone otherwise.
+
+## 2024-05-24 - Do not blindly clear environment variables for standard utilities
+**Vulnerability:** Security theater passing `env={}` to standard utilities like `ping`.
+**Learning:** While system binaries executed via Python's `subprocess` module inherit their execution environment, blindly clearing it (e.g., passing `env={}`) for standard benign utilities like `ping` is 'security theater' and introduces regressions by stripping essential variables like `PATH` and `SystemRoot`.
+**Prevention:** Only explicitly define or clear the environment if the target utility is known to log, exfiltrate, or unsafely consume environment variables.
+
