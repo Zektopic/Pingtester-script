@@ -63,6 +63,19 @@ class TestIsReachable(unittest.TestCase):
             mock_run.assert_not_called()
 
     @patch('testping1.subprocess.run')
+    def test_is_reachable_type_confusion_bool(self, mock_run):
+        """Test is_reachable prevents type confusion with booleans."""
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable(True))
+            self.assertIn("IP address cannot be a boolean", log.output[0])
+            mock_run.assert_not_called()
+
+        with self.assertLogs(level='ERROR') as log:
+            self.assertFalse(is_reachable('8.8.8.8', timeout=True))
+            self.assertIn("Timeout cannot be a boolean", log.output[0])
+            mock_run.assert_not_called()
+
+    @patch('testping1.subprocess.run')
     def test_is_reachable_type_error(self, mock_run):
         """Test is_reachable gracefully handles inputs that raise TypeError."""
         invalid_ips = [None, [], {}, ()]
