@@ -121,3 +121,7 @@
 **Learning:** While system binaries executed via Python's `subprocess` module inherit their execution environment, blindly clearing it (e.g., passing `env={}`) for standard benign utilities like `ping` is 'security theater' and introduces regressions by stripping essential variables like `PATH` and `SystemRoot`.
 **Prevention:** Only explicitly define or clear the environment if the target utility is known to log, exfiltrate, or unsafely consume environment variables.
 
+## 2025-02-15 - Prevent Type Confusion from Boolean Inputs in ipaddress Module
+**Vulnerability:** In Python, the `bool` type inherits from `int`. When `True` or `False` are passed to `ipaddress.ip_address()`, they are evaluated as `0.0.0.1` and `0.0.0.0` respectively, because the module internally uses `isinstance(ip, int)`. This bypasses strict initial `type() is int` checks and can lead to unexpected logic bypasses or SSRF if such addresses are not properly blocked downstream.
+**Learning:** Checking primitive types with `type(var) is X` is effective, but if an external module (like `ipaddress`) uses `isinstance(var, int)`, booleans can still slip through as integers and cause type confusion vulnerabilities deep inside standard libraries.
+**Prevention:** Explicitly check for and reject the `bool` type (`if type(var) is bool:`) *before* passing seemingly safe generic variables into modules that perform their own polymorphic parsing.

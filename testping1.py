@@ -58,6 +58,14 @@ def is_reachable(ip, timeout=1):
         ip_obj = ip
         is_ipv6 = True
     else:
+        # 🛡️ Sentinel: Prevent Type Confusion (CWE-843)
+        # Python's bool inherits from int. The ipaddress module internally uses
+        # isinstance(ip, int), which causes True to evaluate as 0.0.0.1 and
+        # False as 0.0.0.0. We explicitly reject booleans before parsing.
+        if ip_type is bool:
+            logging.error("IP address cannot be a boolean")
+            return False
+
         # 🛡️ Sentinel: Prevent integer string conversion exhaustion (DoS)
         # Check integer bounds before passing to ipaddress to avoid ValueError
         # ⚡ Bolt: Optimize numeric bounds checking by using a combined short-circuiting chain.
@@ -196,6 +204,11 @@ def is_reachable(ip, timeout=1):
             return False
         timeout_val = timeout
     else:
+        # 🛡️ Sentinel: Prevent Type Confusion (CWE-843)
+        if type(timeout) is bool:
+            logging.error("Timeout cannot be a boolean")
+            return False
+
         # 🛡️ Sentinel: Validate timeout length to prevent CPU exhaustion (DoS)
         # Python's int() conversion for massive strings has O(N^2) complexity.
         if isinstance(timeout, (str, bytes)) and len(timeout) > 100:
