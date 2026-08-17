@@ -366,6 +366,46 @@ class TestIsReachable(unittest.TestCase):
             stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=True, timeout=7
         )
 
+    def test_main_block_type_confusion_bool(self):
+        """Test the __main__ block prevents Type Confusion vulnerabilities with booleans."""
+        import tempfile
+        import os
+        import sys
+
+        with open("testping1.py", "r") as f:
+            code = f.read()
+
+        import re
+        # Replace the hardcoded IPs to trigger bool
+        malicious_code = re.sub(
+            r'start_ip\s*=\s*["\'].*?["\']',
+            'start_ip = False',
+            code
+        )
+        malicious_code = re.sub(
+            r'end_ip\s*=\s*["\'].*?["\']',
+            'end_ip = True',
+            malicious_code
+        )
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as tmp:
+            tmp.write(malicious_code)
+            tmp_name = tmp.name
+
+        try:
+            result = subprocess.run(
+                [sys.executable, tmp_name],
+                capture_output=True,
+                text=True
+            )
+            # Should error and exit, not run the scan or raise ip version mismatched / size limits
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Invalid scan range configuration", result.stderr)
+            self.assertIn("IP addresses cannot be booleans", result.stderr)
+            self.assertNotIn("Scanning network...", result.stderr)
+        finally:
+            os.unlink(tmp_name)
+
     def test_main_block_log_injection_prevention(self):
         """Test the __main__ block prevents CRLF log injection via malicious start_ip exceptions."""
         import os
