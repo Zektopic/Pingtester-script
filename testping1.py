@@ -280,6 +280,12 @@ if __name__ == "__main__":
     # Ensure start_ip and end_ip are valid IP addresses, are in the correct order,
     # and limit the maximum scan range to prevent resource exhaustion.
     try:
+        # 🛡️ Sentinel: Prevent Type Confusion (CWE-843)
+        # Python's bool inherits from int. Ensure start_ip and end_ip are not booleans
+        # to prevent bypassing bounds checks and being parsed as 0.0.0.1/0.0.0.0.
+        if type(start_ip) is bool or type(end_ip) is bool:
+            raise ValueError("IP address cannot be a boolean")
+
         # ⚡ Bolt: Optimize numeric bounds checking by using a combined short-circuiting chain.
         # This is faster and cleaner than using multiple separate `if` conditions.
         if type(start_ip) is int and not (0 <= start_ip <= (2**128 - 1)):

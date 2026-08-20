@@ -366,6 +366,64 @@ class TestIsReachable(unittest.TestCase):
             stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=True, timeout=7
         )
 
+    def test_main_block_type_confusion_bool(self):
+        """Test the __main__ block prevents type confusion via boolean inputs."""
+        import sys
+        import subprocess
+        import tempfile
+        import os
+        import re
+
+        # We will dynamically execute the __main__ block code and mock start_ip with boolean payload
+        with open("testping1.py", "r") as f:
+            code = f.read()
+
+        # Find the main block and extract its body
+        main_block_idx = code.find('if __name__ == "__main__":')
+        self.assertNotEqual(main_block_idx, -1)
+
+        # Test True for start_ip
+        malicious_code_true = re.sub(
+            r'start_ip\s*=\s*["\'].*?["\']',
+            'start_ip = True',
+            code
+        )
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as tmp:
+            tmp.write(malicious_code_true)
+            tmp_name_true = tmp.name
+
+        try:
+            result_true = subprocess.run(
+                [sys.executable, tmp_name_true],
+                capture_output=True,
+                text=True
+            )
+            self.assertIn("ERROR:root:Invalid scan range configuration: 'IP address cannot be a boolean'", result_true.stderr)
+        finally:
+            os.unlink(tmp_name_true)
+
+        # Test False for end_ip
+        malicious_code_false = re.sub(
+            r'end_ip\s*=\s*["\'].*?["\']',
+            'end_ip = False',
+            code
+        )
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as tmp:
+            tmp.write(malicious_code_false)
+            tmp_name_false = tmp.name
+
+        try:
+            result_false = subprocess.run(
+                [sys.executable, tmp_name_false],
+                capture_output=True,
+                text=True
+            )
+            self.assertIn("ERROR:root:Invalid scan range configuration: 'IP address cannot be a boolean'", result_false.stderr)
+        finally:
+            os.unlink(tmp_name_false)
+
     def test_main_block_log_injection_prevention(self):
         """Test the __main__ block prevents CRLF log injection via malicious start_ip exceptions."""
         import os
