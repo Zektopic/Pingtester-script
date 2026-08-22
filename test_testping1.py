@@ -366,6 +366,34 @@ class TestIsReachable(unittest.TestCase):
             stdout=DEVNULL_FD, stderr=DEVNULL_FD, close_fds=True, timeout=7
         )
 
+    def test_main_block_type_confusion_bool(self):
+        """Test the __main__ block prevents type confusion when bools are passed for IPs."""
+        import tempfile
+        import sys
+        import os
+
+        with open("testping1.py", "r") as f:
+            content = f.read()
+
+        # Modify the start_ip and end_ip directly in the file string
+        content = content.replace('start_ip = "192.168.43.1"', 'start_ip = False')
+        content = content.replace('end_ip = "192.168.43.254"', 'end_ip = True')
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as temp_script:
+            temp_script.write(content)
+            temp_path = temp_script.name
+
+        try:
+            result = subprocess.run(
+                [sys.executable, temp_path],
+                capture_output=True,
+                text=True
+            )
+            # Assert that the custom TypeError we added is caught and its message is logged
+            self.assertIn("cannot be a boolean", result.stderr)
+        finally:
+            os.remove(temp_path)
+
     def test_main_block_log_injection_prevention(self):
         """Test the __main__ block prevents CRLF log injection via malicious start_ip exceptions."""
         import os
