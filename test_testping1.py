@@ -410,6 +410,7 @@ class TestIsReachable(unittest.TestCase):
         """Test the __main__ block prevents CRLF log injection via malicious start_ip exceptions."""
         import os
         import tempfile
+        import sys
 
         # Create a temporary copy of testping1.py that accepts start_ip from env vars
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as temp_script:
@@ -426,7 +427,7 @@ class TestIsReachable(unittest.TestCase):
             env["MALICIOUS_IP"] = malicious_payload
 
             result = subprocess.run(
-                ["python3", temp_script_path],
+                [sys.executable, temp_script_path],
                 capture_output=True,
                 text=True,
                 env=env
