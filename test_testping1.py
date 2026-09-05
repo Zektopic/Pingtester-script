@@ -1,5 +1,6 @@
 import unittest
 import subprocess
+import sys
 from unittest.mock import patch, MagicMock
 from testping1 import is_reachable
 
@@ -425,8 +426,11 @@ class TestIsReachable(unittest.TestCase):
             malicious_payload = "192.168.43.1\nERROR:root:System Compromised"
             env["MALICIOUS_IP"] = malicious_payload
 
+            # 🛡️ Sentinel: Fix Bandit B607 by using sys.executable instead of a hardcoded "python3" string.
+            # This ensures a secure, absolute path to the active interpreter is used, preventing
+            # local PATH interception attacks that could execute a malicious local file named 'python3'.
             result = subprocess.run(
-                ["python3", temp_script_path],
+                [sys.executable, temp_script_path],
                 capture_output=True,
                 text=True,
                 env=env
