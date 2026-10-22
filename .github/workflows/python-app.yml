@@ -9,10 +9,12 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, manupa-hnx]
 
     steps:
     - uses: actions/checkout@v4
+    - name: Configure Git safe directory
+      run: git config --global --add safe.directory '*'
     - name: Set up Python 3.10
       uses: actions/setup-python@v4
       with:
